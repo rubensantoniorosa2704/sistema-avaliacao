@@ -4,6 +4,7 @@ using SistemaAvaliacao.Web.Data;
 using SistemaAvaliacao.Web.Models.Entities;
 using SistemaAvaliacao.Web.Models.Enums;
 using SistemaAvaliacao.Web.Models.ViewModels;
+using SistemaAvaliacao.Web.Services;
 
 namespace SistemaAvaliacao.Web.Controllers;
 
@@ -15,10 +16,12 @@ namespace SistemaAvaliacao.Web.Controllers;
 public class ExameController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly TentativaExameService _tentativas;
 
-    public ExameController(ApplicationDbContext context)
+    public ExameController(ApplicationDbContext context, TentativaExameService tentativas)
     {
         _context = context;
+        _tentativas = tentativas;
     }
 
     /// <summary>
@@ -327,15 +330,12 @@ public class ExameController : Controller
         if (provaAluno == null)
             return Json(new { sucesso = false, erro = "Tentativa inválida" });
 
-        var agora = DateTime.UtcNow;
-        if (agora > prova.DataFim)
-            return Json(new { sucesso = false, erro = "Prova encerrada" });
+        // Mesmo fora do prazo a tentativa é fechada (com o horário do DataFim): as respostas
+        // já salvas valem e o aluno segue para a tela de confirmação, em vez de ver um erro
+        // quando o cronômetro do navegador zera um pouco antes do relógio do servidor.
+        var expirada = await _tentativas.FinalizarAsync(provaAluno, prova);
 
-        provaAluno.Status = StatusProvaAluno.Finalizada;
-        provaAluno.FinalizadaEm = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
-
-        return Json(new { sucesso = true });
+        return Json(new { sucesso = true, expirada });
     }
 
     /// <summary>

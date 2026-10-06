@@ -34,6 +34,7 @@ builder.Services.AddScoped<XlsxProvaImportService>();
 builder.Services.AddScoped<ExportacaoResultadosService>();
 builder.Services.AddScoped<ExportacaoXlsxService>();
 builder.Services.AddScoped<FolhaRespostaPdfService>();
+builder.Services.AddScoped<TentativaExameService>();
 
 // Configurar Cookie Authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

@@ -85,6 +85,10 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey(pa => pa.AlunoId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Consolidação por prova (EmAndamento → Finalizada) e contagens por status.
+        modelBuilder.Entity<ProvaAluno>()
+            .HasIndex(pa => new { pa.ProvaId, pa.Status });
+
         // ===== RESPOSTA =====
 
         modelBuilder.Entity<Resposta>()

@@ -224,6 +224,8 @@ namespace SistemaAvaliacao.Web.Migrations
 
                     b.HasIndex("AlunoId");
 
+                    b.HasIndex("ProvaId", "Status");
+
                     b.ToTable("ProvaAlunos");
                 });
 

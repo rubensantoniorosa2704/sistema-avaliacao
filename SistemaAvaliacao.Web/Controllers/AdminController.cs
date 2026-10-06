@@ -25,6 +25,7 @@ public class AdminController : Controller
     private readonly ExportacaoResultadosService _exportacaoResultados;
     private readonly ExportacaoXlsxService _exportacaoXlsx;
     private readonly FolhaRespostaPdfService _folhaRespostaPdf;
+    private readonly TentativaExameService _tentativas;
 
     public AdminController(
         ApplicationDbContext context,
@@ -33,7 +34,8 @@ public class AdminController : Controller
         XlsxProvaImportService xlsxImport,
         ExportacaoResultadosService exportacaoResultados,
         ExportacaoXlsxService exportacaoXlsx,
-        FolhaRespostaPdfService folhaRespostaPdf)
+        FolhaRespostaPdfService folhaRespostaPdf,
+        TentativaExameService tentativas)
     {
         _context = context;
         _imageUpload = imageUpload;
@@ -42,6 +44,7 @@ public class AdminController : Controller
         _exportacaoResultados = exportacaoResultados;
         _exportacaoXlsx = exportacaoXlsx;
         _folhaRespostaPdf = folhaRespostaPdf;
+        _tentativas = tentativas;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(Provas));
@@ -62,6 +65,8 @@ public class AdminController : Controller
     /// <summary>
     /// Export liberado quando todos os alunos finalizaram OU a janela da prova
     /// terminou — e desde que haja ao menos um aluno finalizado (dados a exportar).
+    /// Depois do prazo, ConsolidarSeEncerradaAsync já transformou as tentativas
+    /// abandonadas em Finalizada, então basta contar os finalizados.
     /// </summary>
     private static bool PodeExportar(Prova prova)
     {
@@ -244,6 +249,11 @@ public class AdminController : Controller
     [HttpGet]
     public async Task<IActionResult> DetalhesProva(Guid id)
     {
+        // Se o prazo já terminou, consolida as tentativas abandonadas (EmAndamento →
+        // Finalizada) antes de ler os dados, para que status e exportações já reflitam
+        // o resultado final. Não faz nada antes do prazo.
+        await _tentativas.ConsolidarSeEncerradaAsync(id);
+
         var prova = await _context.Provas
             .Include(p => p.CriadoPor)
             .Include(p => p.ProvaQuestoes).ThenInclude(pq => pq.Questao)
