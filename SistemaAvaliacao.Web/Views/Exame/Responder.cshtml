@@ -1,0 +1,856 @@
+@model SistemaAvaliacao.Web.Models.ViewModels.ResponderProvaViewModel
+@{
+    ViewData["Title"] = Model.NomeProva;
+    Layout = "~/Views/Shared/_LayoutExame.cshtml";
+}
+
+@Html.AntiForgeryToken()
+
+<style>
+:root {
+    --exame-ink: #172033;
+    --exame-muted: #64748b;
+    --exame-line: #dbe3ef;
+    --exame-accent: #2563eb;
+    --exame-accent-soft: #eff6ff;
+    --exame-success: #16803c;
+}
+.exame-shell { color: var(--exame-ink); }
+.exame-header {
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+    background: rgba(255,255,255,.96);
+    border-bottom: 1px solid var(--exame-line);
+    backdrop-filter: blur(10px);
+}
+.exame-header > .container {
+    position: relative;
+    padding-top: .75rem !important;
+    padding-bottom: .5rem !important;
+}
+.exame-progress { height: 6px; background: #e8eef7; }
+.exame-progress .progress-bar { background: var(--exame-accent); transition: width .25s ease; }
+.exame-status { min-height: 1.25rem; color: var(--exame-muted); }
+.exame-status.salvo { color: var(--exame-success); }
+.exame-status.erro { color: #b42318; }
+.exame-layout {
+    display: grid;
+    grid-template-columns: 230px minmax(0, 1fr);
+    gap: 2rem;
+    align-items: start;
+    min-height: calc(100vh - 210px);
+}
+.exame-sidebar {
+    position: sticky;
+    top: 112px;
+    max-height: calc(100vh - 136px);
+    overflow-y: auto;
+    padding-right: .35rem;
+}
+.exame-sidebar .questao-nav-list {
+    display: grid;
+    gap: .5rem;
+}
+.exame-sidebar .questao-nav-btn {
+    width: 100%;
+    height: 44px;
+    border-radius: 8px;
+    text-align: left;
+    padding: .5rem .75rem;
+}
+.exame-sidebar .questao-nav-btn::after {
+    content: 'Questão';
+    margin-left: .6rem;
+    font-weight: 500;
+}
+.exame-mobile-nav { display: none !important; }
+.exame-question-area { min-width: 0; }
+.exame-mobile-question-strip { display: none; }
+.questao-actions { background: rgba(255,255,255,.96); }
+.exame-gaveta {
+    height: auto !important;
+    max-height: min(70vh, 520px);
+    border-radius: 18px 18px 0 0;
+}
+.exame-gaveta-handle {
+    width: 100px;
+    height: 5px;
+    margin: .75rem auto .25rem;
+    border-radius: 999px;
+    background: #cbd5e1;
+}
+.status-dot {
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 50%;
+    font-size: .875rem;
+    font-weight: 600;
+    transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.status-dot:hover { transform: translateY(-2px); }
+.status-dot-pending { background: #cbd5e1; color: #475569; }
+.status-dot-current {
+    box-shadow: 0 0 0 3px #94a3b8;
+}
+.status-dot-responded { background: #3b82f6; color: #fff; }
+.status-legend { color: #64748b; }
+.status-legend-dot { width: 11px; height: 11px; border-radius: 50%; }
+.status-legend-pending { background: #cbd5e1; }
+.status-legend-current { background: #94a3b8; }
+.status-legend-responded { background: #3b82f6; }
+.mobile-question-strip { display: none; align-items: center; gap: .65rem; width: 100%; padding: .35rem .5rem .5rem; }
+.mobile-question-dots {
+    display: flex;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: calc(100% - 52px);
+    gap: .6rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: .25rem;
+    scrollbar-width: none;
+}
+.mobile-question-dots::-webkit-scrollbar { display: none; }
+.mobile-question-dots .status-dot { width: 40px; height: 40px; flex: 0 0 40px; font-size: .875rem; }
+.mobile-question-expand {
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    display: grid;
+    place-items: center;
+}
+.mobile-question-expand-icon {
+    width: 16px;
+    height: 16px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 3px;
+}
+.mobile-question-expand-icon span { border: 1.5px solid #64748b; border-radius: 2px; }
+.questao-nav-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #dee2e6;
+    background: #f8f9fa;
+    color: #6c757d;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.questao-nav-btn.respondida {
+    background: #0d6efd;
+    border-color: #0d6efd;
+    color: white;
+}
+.questao-nav-btn.atual {
+    border-color: #0d6efd;
+    border-width: 3px;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+}
+.questao-nav-btn:hover {
+    transform: scale(1.1);
+}
+.questao-card {
+    display: none;
+}
+.questao-card.ativa {
+    display: block;
+    min-height: calc(100vh - 260px);
+    padding: .75rem 0 1.5rem;
+}
+.alt-option {
+    padding: 12px 16px;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 12px;
+    background: white;
+}
+.alt-option:hover {
+    border-color: #0d6efd;
+    background: #f8f9ff;
+}
+.alt-option:has(input[type=radio]:checked) {
+    border-color: #0d6efd;
+    background: #e7f1ff;
+}
+/* Imagens ocupam largura total */
+.questao-card img {
+    max-width: 100% !important;
+    max-height: 600px !important;
+    height: auto !important;
+    cursor: zoom-in;
+}
+.imagem-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background: rgba(15, 23, 42, .82);
+}
+.imagem-lightbox.aberta { display: flex; }
+.imagem-lightbox img {
+    max-width: 94vw;
+    max-height: 90vh;
+    object-fit: contain;
+    touch-action: none;
+    user-select: none;
+    cursor: grab;
+    transform: translate3d(0, 0, 0) scale(1);
+    will-change: transform;
+}
+.imagem-lightbox img:active { cursor: grabbing; }
+.imagem-lightbox-fechar {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 42px;
+    height: 42px;
+    border: 1px solid rgba(255,255,255,.5);
+    border-radius: 50%;
+    color: white;
+    background: rgba(15,23,42,.7);
+    font-size: 1.5rem;
+    line-height: 1;
+}
+/* Tabelas com tamanho controlado */
+.questao-card table {
+    width: auto !important;
+    max-width: 600px !important;
+    font-size: 0.85rem;
+    margin: 0 auto;
+}
+/* Enunciado com fonte maior */
+.alert-light {
+    font-size: 1.05rem;
+}
+@@media (max-width: 576px) {
+    .exame-content { padding-top: 1rem !important; }
+    .questao-nav-btn { width: 36px; height: 36px; }
+    .alt-option { padding: 14px 12px; }
+    .exame-header .text-end small { font-size: .68rem; }
+    #cronometro { font-size: 1.5rem !important; white-space: nowrap; }
+}
+@@media (max-width: 767px) {
+    .exame-layout { display: block; }
+    .exame-sidebar { display: none; }
+    .mobile-question-strip { display: flex; }
+    .exame-header > .container > .d-flex:first-child { justify-content: center !important; }
+    .exame-header .min-width-0 { display: none; }
+    .exame-header > .container > .d-flex:first-child { min-height: 42px; }
+    .exame-header .text-end {
+        position: static;
+        width: 100%;
+        text-align: center !important;
+    }
+    .exame-header .text-end small { display: none; }
+    .mobile-question-strip { justify-content: center; margin-top: .5rem !important; }
+    .exame-desktop-navigation-label { display: none !important; }
+    .questao-actions {
+        position: sticky;
+        bottom: 0;
+        z-index: 1010;
+        margin-left: -.75rem;
+        margin-right: -.75rem;
+        padding: .75rem;
+        box-shadow: 0 -4px 12px rgba(23,32,51,.08);
+    }
+}
+@@media (min-width: 768px) {
+    .exame-header > .container,
+    .exame-content { max-width: 1440px !important; }
+    .exame-header > .container > .d-flex:first-child { justify-content: center !important; }
+    .exame-header .min-width-0 { display: none; }
+    .exame-header .text-end {
+        position: absolute;
+        top: .75rem;
+        right: 1.5rem;
+        width: auto;
+        text-align: right !important;
+    }
+    .exame-header .text-end small { display: none; }
+    #cronometro { font-size: 2rem !important; white-space: nowrap; }
+    .mobile-question-strip { display: flex; justify-content: center; margin-top: .75rem !important; }
+    .mobile-question-dots .status-dot { width: 46px; height: 46px; flex-basis: 46px; font-size: 1rem; }
+    .mobile-question-expand { width: 48px; height: 48px; }
+    .exame-layout { display: block; min-height: calc(100vh - 180px); }
+    .exame-sidebar { display: none; }
+    .exame-desktop-navigation-label { display: none !important; }
+    .exame-question-area { max-width: 1120px; margin: 0 auto; }
+    .questao-card.ativa { min-height: calc(100vh - 230px); font-size: 1.08rem; }
+    .questao-card.ativa .alert-light { font-size: 1.15rem; }
+    .questao-card.ativa h6 { font-size: 1.3rem; }
+    .alt-option { padding: 16px 20px; }
+}
+</style>
+
+<div class="exame-shell">
+<header class="exame-header">
+    <div class="container py-3" style="max-width: 900px;">
+        <div class="d-flex justify-content-between align-items-start gap-3">
+            <div class="min-width-0">
+                <div class="text-uppercase small text-muted fw-semibold">Prova em andamento</div>
+                <h1 class="h5 fw-bold mb-1 text-truncate">@Model.NomeProva</h1>
+                <div class="small text-muted">
+                    <span id="textoProgresso">@Model.TotalRespondidas de @Model.TotalQuestoes respondidas</span>
+                    <span aria-hidden="true"> · </span>
+                    <span id="statusSalvamento" class="exame-status" role="status" aria-live="polite">Respostas salvas automaticamente</span>
+                </div>
+            </div>
+            <div class="text-end flex-shrink-0">
+                <small class="text-muted d-block">Tempo restante</small>
+                <div class="fs-5 fw-bold text-danger" id="cronometro" role="timer" aria-live="polite">--:--</div>
+            </div>
+        </div>
+        <div class="mobile-question-strip mt-3" aria-label="Navegação rápida das questões">
+            <div class="mobile-question-dots">
+                @foreach (var q in Model.Questoes)
+                {
+                    <button type="button"
+                            class="btn-ir-questao status-dot @(q.RespostaMarcada.HasValue ? "status-dot-responded" : "status-dot-pending") @(q.Ordem == 1 ? "status-dot-current" : "")"
+                            data-ordem="@q.Ordem"
+                            data-respondida="@(q.RespostaMarcada.HasValue ? "true" : "false")"
+                            aria-label="Ir para questão @q.Ordem">
+                        @q.Ordem
+                    </button>
+                }
+            </div>
+            <button type="button" class="mobile-question-expand" data-bs-toggle="offcanvas"
+                    data-bs-target="#gavetaQuestoes" aria-controls="gavetaQuestoes" aria-label="Expandir navegação das questões">
+                <span class="mobile-question-expand-icon" aria-hidden="true">
+                    <span></span><span></span><span></span><span></span>
+                </span>
+            </button>
+        </div>
+    </div>
+    <div class="exame-progress" aria-hidden="true">
+        <div id="barraProgresso" class="progress-bar" style="width:@(Model.TotalQuestoes == 0 ? 0 : Model.TotalRespondidas * 100 / Model.TotalQuestoes)%"></div>
+    </div>
+</header>
+
+<main class="container-fluid exame-content py-4" style="max-width: 1240px;">
+
+    <div class="exame-desktop-navigation-label d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <div class="small text-muted">Navegação</div>
+            <span class="fw-semibold">Selecione uma questão para continuar</span>
+        </div>
+        <span class="badge bg-light text-dark border">@Model.TotalQuestoes questões</span>
+    </div>
+
+    <div class="exame-layout">
+        <aside class="exame-sidebar" aria-label="Navegação das questões">
+            <div class="small text-muted text-uppercase fw-semibold mb-2">Questões</div>
+            <div class="questao-nav-list">
+                @foreach (var q in Model.Questoes)
+                {
+                    <button type="button"
+                            class="questao-nav-btn @(q.Ordem == 1 ? "atual" : "") @(q.RespostaMarcada.HasValue ? "respondida" : "")"
+                            data-ordem="@q.Ordem"
+                            data-questao-id="@q.QuestaoId"
+                            aria-label="Ir para a questão @q.Ordem"
+                            aria-current="@(q.Ordem == 1 ? "step" : "false")">
+                        @q.Ordem°
+                    </button>
+                }
+            </div>
+        </aside>
+
+        <div class="exame-question-area">
+            @* Questões (uma de cada vez) *@
+    @{
+        string? textoBaseAnterior = null;
+    }
+            @foreach (var q in Model.Questoes)
+            {
+        <div class="questao-card @(q.Ordem == 1 ? "ativa" : "")" data-ordem="@q.Ordem" data-questao-id="@q.QuestaoId">
+            <div class="mb-3">
+                <span class="badge bg-light text-dark border">QUESTÃO @q.Ordem° DE @Model.TotalQuestoes</span>
+            </div>
+
+            @* Mostrar texto-base apenas na primeira ocorrência *@
+            @if (!string.IsNullOrEmpty(q.TextoBase) && q.TextoBase != textoBaseAnterior)
+            {
+                <div class="alert alert-info border-info mb-3">
+                    <h6 class="fw-bold mb-2">📖 Texto-base</h6>
+                    <div style="white-space: pre-wrap;">@q.TextoBase</div>
+                </div>
+                textoBaseAnterior = q.TextoBase;
+            }
+
+            @* Enunciado da questão *@
+            @if (!string.IsNullOrEmpty(q.Enunciado))
+            {
+                <div class="alert alert-light border mb-3">
+                    <small class="text-muted">@q.Enunciado</small>
+                </div>
+            }
+
+            @* Imagem da questão *@
+            @if (!string.IsNullOrEmpty(q.ImagemUrl))
+            {
+                <div class="mb-3">
+                    <img src="@q.ImagemUrl" 
+                        alt="@(string.IsNullOrWhiteSpace(q.DescricaoAcessibilidade) ? $"Imagem da questão {q.Ordem}" : q.DescricaoAcessibilidade)" 
+                         class="img-fluid rounded shadow-sm w-100" 
+                         style="max-height: 600px; object-fit: contain;" />
+                </div>
+            }
+
+            <h6 class="fw-semibold mb-4">@q.Comando</h6>
+
+            <div class="alternativas" aria-label="Alternativas da questão @q.Ordem">
+                @foreach (var alt in q.Alternativas)
+                {
+                    <label class="alt-option d-flex align-items-start">
+                        <input type="radio" 
+                               class="form-check-input mt-1 me-3 alt-radio" 
+                               name="questao_@q.QuestaoId" 
+                               value="@alt.Letra"
+                               data-questao-id="@q.QuestaoId"
+                               data-ordem="@q.Ordem"
+                               @(q.RespostaMarcada == alt.Letra ? "checked" : "") />
+                        <div class="flex-grow-1 alt-label">
+                            <strong>@alt.Letra)</strong> @alt.Texto
+                        </div>
+                    </label>
+                }
+            </div>
+
+            <div class="questao-actions d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                <button type="button" class="btn btn-outline-secondary btn-anterior" @(q.Ordem == 1 ? "disabled" : "")>
+                    ← Anterior
+                </button>
+
+                <button type="button" class="btn btn-light btn-limpar" data-questao-id="@q.QuestaoId" @(q.RespostaMarcada.HasValue ? "" : "disabled")>
+                    Limpar resposta
+                </button>
+
+                @if (q.Ordem < Model.TotalQuestoes)
+                {
+                    <button type="button" class="btn btn-primary btn-proxima">
+                        Próxima →
+                    </button>
+                }
+                else
+                {
+                    <button type="button" class="btn btn-success btn-finalizar" id="btnFinalizar">
+                        ✓ Finalizar Prova
+                    </button>
+                }
+            </div>
+        </div>
+            }
+        </div>
+    </div>
+</main>
+</div>
+
+<div class="offcanvas offcanvas-bottom exame-gaveta" tabindex="-1" id="gavetaQuestoes" aria-labelledby="gavetaQuestoesTitulo">
+    <div class="exame-gaveta-handle" aria-hidden="true"></div>
+    <div class="offcanvas-header justify-content-center pb-2">
+        <h2 class="offcanvas-title h5 mb-0" id="gavetaQuestoesTitulo">Navegação de questões</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Fechar"></button>
+    </div>
+    <div class="offcanvas-body px-4 pb-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-center gap-3">
+            @foreach (var q in Model.Questoes)
+            {
+                <button type="button"
+                        class="btn-ir-questao status-dot @(q.RespostaMarcada.HasValue ? "status-dot-responded" : q.Ordem == 1 ? "status-dot-current" : "status-dot-pending")"
+                        data-ordem="@q.Ordem"
+                        data-respondida="@(q.RespostaMarcada.HasValue ? "true" : "false")"
+                        aria-label="Ir para questão @q.Ordem"
+                        data-bs-dismiss="offcanvas">
+                    @q.Ordem
+                </button>
+            }
+        </div>
+        <div class="status-legend d-flex flex-wrap align-items-center justify-content-center gap-4 mt-4 small">
+            <span class="d-flex align-items-center gap-2"><span class="status-legend-dot status-legend-pending"></span>Pendente</span>
+            <span class="d-flex align-items-center gap-2"><span class="status-legend-dot status-legend-current"></span>Atual</span>
+            <span class="d-flex align-items-center gap-2"><span class="status-legend-dot status-legend-responded"></span>Respondida</span>
+        </div>
+    </div>
+</div>
+
+<div class="imagem-lightbox" id="imagemLightbox" role="dialog" aria-modal="true" aria-label="Imagem ampliada">
+    <button type="button" class="imagem-lightbox-fechar" id="fecharImagemLightbox" aria-label="Fechar imagem ampliada">&times;</button>
+    <img id="imagemLightboxImg" src="" alt="" />
+</div>
+
+@* Modal de visão geral *@
+<div class="modal fade" id="modalVisaoGeral" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title fw-bold">Visão Geral da Prova</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2">
+                    @foreach (var q in Model.Questoes)
+                    {
+                        <div class="col-3">
+                            <button type="button" 
+                                    class="btn btn-sm w-100 text-start btn-ir-questao @(q.RespostaMarcada.HasValue ? "btn-success" : "btn-outline-secondary")"
+                                    data-ordem="@q.Ordem"
+                                    data-bs-dismiss="modal">
+                                <span class="badge @(q.RespostaMarcada.HasValue ? "bg-white text-success" : "bg-secondary")">@q.Ordem</span>
+                                @if (q.RespostaMarcada.HasValue)
+                                {
+                                    <span class="ms-1">✓</span>
+                                }
+                                else
+                                {
+                                    <span class="ms-1">Não respondida</span>
+                                }
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="me-auto">
+                    <strong id="modalTotalRespondidas">0</strong> de <strong>@Model.TotalQuestoes</strong> respondidas
+                </div>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const token = '@Model.Token';
+        const tentativa = '@Model.TokenTentativa';
+        const dataFim = new Date('@Model.DataFim.ToString("O")');
+        const totalQuestoes = @Model.TotalQuestoes;
+        let ordemAtual = 1;
+        let finalizando = false;
+        let salvamentosPendentes = 0;
+
+        $(function () {
+            function mostrarStatus(texto, classe) {
+                $('#statusSalvamento').text(texto).removeClass('salvo erro').addClass(classe || '');
+            }
+
+            function mostrarMensagem(texto, tipo) {
+                if (typeof toastr !== 'undefined') {
+                    toastr[type](texto);
+                } else {
+                    mostrarStatus(texto, tipo === 'error' ? 'erro' : '');
+                }
+            }
+
+            function atualizarProgresso(totalRespondidas) {
+                $('#textoProgresso').text(totalRespondidas + ' de ' + totalQuestoes + ' respondidas');
+                const percentual = totalQuestoes === 0 ? 0 : Math.round(totalRespondidas * 100 / totalQuestoes);
+                $('#barraProgresso').css('width', percentual + '%');
+            }
+
+            const lightbox = document.getElementById('imagemLightbox');
+            const lightboxImg = document.getElementById('imagemLightboxImg');
+            let imagemZoom = 1;
+            let imagemX = 0;
+            let imagemY = 0;
+            let distanciaInicial = 0;
+            let zoomInicial = 1;
+            let arrastandoImagem = false;
+            let inicioArrastoX = 0;
+            let inicioArrastoY = 0;
+            let imagemInicioX = 0;
+            let imagemInicioY = 0;
+
+            function atualizarImagemLightbox() {
+                lightboxImg.style.transform = `translate3d(${imagemX}px, ${imagemY}px, 0) scale(${imagemZoom})`;
+            }
+
+            function limitarZoom(valor) {
+                return Math.min(4, Math.max(1, valor));
+            }
+
+            function abrirImagem(src, alt) {
+                lightboxImg.src = src;
+                lightboxImg.alt = alt || 'Imagem ampliada';
+                imagemZoom = 1;
+                imagemX = 0;
+                imagemY = 0;
+                atualizarImagemLightbox();
+                lightbox.classList.add('aberta');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function fecharImagem() {
+                lightbox.classList.remove('aberta');
+                lightboxImg.src = '';
+                document.body.style.overflow = '';
+            }
+
+            $('.questao-card img').on('click', function () {
+                abrirImagem(this.src, this.alt);
+            });
+            $('#fecharImagemLightbox').on('click', fecharImagem);
+            $(lightbox).on('click', function (event) {
+                if (event.target === lightbox) fecharImagem();
+            });
+            $(document).on('keydown', function (event) {
+                if (event.key === 'Escape' && lightbox.classList.contains('aberta')) fecharImagem();
+            });
+
+            lightboxImg.addEventListener('wheel', function (event) {
+                event.preventDefault();
+                imagemZoom = limitarZoom(imagemZoom + (event.deltaY < 0 ? .25 : -.25));
+                if (imagemZoom === 1) { imagemX = 0; imagemY = 0; }
+                atualizarImagemLightbox();
+            }, { passive: false });
+
+            lightboxImg.addEventListener('touchstart', function (event) {
+                if (event.touches.length === 2) {
+                    distanciaInicial = Math.hypot(
+                        event.touches[0].clientX - event.touches[1].clientX,
+                        event.touches[0].clientY - event.touches[1].clientY);
+                    zoomInicial = imagemZoom;
+                    arrastandoImagem = false;
+                } else if (event.touches.length === 1 && imagemZoom > 1) {
+                    arrastandoImagem = true;
+                    inicioArrastoX = event.touches[0].clientX;
+                    inicioArrastoY = event.touches[0].clientY;
+                    imagemInicioX = imagemX;
+                    imagemInicioY = imagemY;
+                }
+            }, { passive: false });
+
+            lightboxImg.addEventListener('touchmove', function (event) {
+                event.preventDefault();
+                if (event.touches.length === 2 && distanciaInicial > 0) {
+                    const distanciaAtual = Math.hypot(
+                        event.touches[0].clientX - event.touches[1].clientX,
+                        event.touches[0].clientY - event.touches[1].clientY);
+                    imagemZoom = limitarZoom(zoomInicial * distanciaAtual / distanciaInicial);
+                    if (imagemZoom === 1) { imagemX = 0; imagemY = 0; }
+                } else if (arrastandoImagem && event.touches.length === 1) {
+                    imagemX = imagemInicioX + event.touches[0].clientX - inicioArrastoX;
+                    imagemY = imagemInicioY + event.touches[0].clientY - inicioArrastoY;
+                }
+                atualizarImagemLightbox();
+            }, { passive: false });
+
+            lightboxImg.addEventListener('touchend', function () {
+                distanciaInicial = 0;
+                arrastandoImagem = false;
+            });
+
+            // Cronômetro
+            function atualizarCronometro() {
+                const agora = new Date();
+                const restante = Math.max(0, Math.floor((dataFim - agora) / 1000));
+                const horas = Math.floor(restante / 3600);
+                const min = Math.floor((restante % 3600) / 60);
+                const seg = restante % 60;
+                
+                if (horas > 0) {
+                    $('#cronometro').text(horas + ':' + String(min).padStart(2, '0') + ':' + String(seg).padStart(2, '0'));
+                } else {
+                    $('#cronometro').text(String(min).padStart(2, '0') + ':' + String(seg).padStart(2, '0'));
+                }
+
+                if (restante === 0 && !finalizando) {
+                    $('.alt-radio').prop('disabled', true);
+                    mostrarMensagem('Prazo da prova expirou.', 'error');
+                    finalizarProva();
+                }
+            }
+            atualizarCronometro();
+            setInterval(atualizarCronometro, 1000);
+
+            // Navegação
+            function atualizarPontoAtual(ordem) {
+                $('.status-dot').each(function () {
+                    const respondida = $(this).data('respondida') === true;
+                    $(this).removeClass('status-dot-current status-dot-pending status-dot-responded')
+                        .addClass(respondida ? 'status-dot-responded' : 'status-dot-pending');
+                });
+
+                const pontoAtual = $(`.status-dot[data-ordem="${ordem}"]`);
+                if (pontoAtual.data('respondida') !== true) {
+                    pontoAtual.removeClass('status-dot-pending').addClass('status-dot-current');
+                }
+            }
+
+            function atualizarFaixaSuperior(ordem) {
+                const janela = 5;
+                const inicio = Math.max(1, Math.min(ordem - 2, totalQuestoes - janela + 1));
+                const fim = Math.min(totalQuestoes, inicio + janela - 1);
+
+                $('.mobile-question-dots .status-dot').each(function () {
+                    const numero = Number($(this).data('ordem'));
+                    $(this).toggle(numero >= inicio && numero <= fim);
+                });
+            }
+
+            function irParaQuestao(ordem) {
+                $('.questao-card').removeClass('ativa');
+                $(`.questao-card[data-ordem="${ordem}"]`).addClass('ativa');
+                $('.questao-nav-btn').removeClass('atual');
+                $(`.questao-nav-btn[data-ordem="${ordem}"]`).addClass('atual');
+                $('.questao-nav-btn').attr('aria-current', 'false');
+                $(`.questao-nav-btn[data-ordem="${ordem}"]`).attr('aria-current', 'step');
+                atualizarPontoAtual(ordem);
+                atualizarFaixaSuperior(ordem);
+                ordemAtual = ordem;
+                $('html, body').animate({ scrollTop: 0 }, 300);
+            }
+
+            $('.btn-proxima').on('click', function () {
+                if (ordemAtual < totalQuestoes) {
+                    irParaQuestao(ordemAtual + 1);
+                }
+            });
+
+            $('.btn-anterior').on('click', function () {
+                if (ordemAtual > 1) {
+                    irParaQuestao(ordemAtual - 1);
+                }
+            });
+
+            $('.questao-nav-btn, .btn-ir-questao').on('click', function () {
+                const ordem = $(this).data('ordem');
+                irParaQuestao(ordem);
+            });
+
+            atualizarFaixaSuperior(ordemAtual);
+
+            $('#btnVerTodasQuestoes').on('click', function () {
+                atualizarModalProgresso();
+                new bootstrap.Modal('#modalVisaoGeral').show();
+            });
+
+            // Limpar resposta
+            $('.btn-limpar').on('click', function () {
+                const questaoId = $(this).data('questao-id');
+                const botao = this;
+                if (salvamentosPendentes > 0 || finalizando) return;
+                $(botao).prop('disabled', true);
+                mostrarStatus('Removendo resposta...', '');
+
+                $.post(`/prova/${token}/limpar-resposta`, {
+                    questaoId: questaoId,
+                    tentativa: tentativa,
+                    __RequestVerificationToken: $('[name=__RequestVerificationToken]').val()
+                })
+                .done(function (resp) {
+                    if (!resp.sucesso) {
+                        mostrarMensagem(resp.erro || 'Não foi possível limpar a resposta.', 'error');
+                        $(botao).prop('disabled', false);
+                        return;
+                    }
+
+                    $(`input[name="questao_${questaoId}"]:checked`).prop('checked', false);
+                    $(`.questao-nav-btn[data-questao-id="${questaoId}"]`).removeClass('respondida');
+                    $(`.status-dot[data-ordem="${$(`.questao-card[data-questao-id="${questaoId}"]`).data('ordem')}"]`)
+                        .data('respondida', false);
+                    atualizarPontoAtual(ordemAtual);
+                    atualizarProgresso(resp.totalRespondidas);
+                    mostrarStatus('Resposta removida.', 'salvo');
+                })
+                .fail(function () {
+                    mostrarMensagem('Falha de conexão ao remover a resposta.', 'error');
+                    $(botao).prop('disabled', false);
+                });
+            });
+
+            // Salvar resposta
+            $(document).on('change', '.alt-radio', function () {
+                const questaoId = $(this).data('questao-id');
+                const alternativa = $(this).val();
+                const ordem = $(this).data('ordem');
+
+                salvamentosPendentes++;
+                mostrarStatus('Salvando resposta...', '');
+                $.post(`/prova/${token}/salvar-resposta`, {
+                    questaoId: questaoId,
+                    alternativa: alternativa,
+                    tentativa: tentativa,
+                    __RequestVerificationToken: $('[name=__RequestVerificationToken]').val()
+                })
+                .done(function (resp) {
+                    salvamentosPendentes = Math.max(0, salvamentosPendentes - 1);
+                    if (resp.sucesso) {
+                        $(`.questao-nav-btn[data-ordem="${ordem}"]`).addClass('respondida');
+                        $(`.status-dot[data-ordem="${ordem}"]`)
+                            .data('respondida', true)
+                            .removeClass('status-dot-current status-dot-pending')
+                            .addClass('status-dot-responded');
+                        atualizarProgresso(resp.totalRespondidas);
+                        $(`.btn-limpar[data-questao-id="${questaoId}"]`).prop('disabled', false);
+                        mostrarStatus('Resposta salva.', 'salvo');
+                    } else {
+                        mostrarMensagem(resp.erro || 'Erro ao salvar resposta.', 'error');
+                    }
+                })
+                .fail(function (xhr) {
+                    salvamentosPendentes = Math.max(0, salvamentosPendentes - 1);
+                    mostrarMensagem('Erro ao salvar resposta. Verifique sua conexão.', 'error');
+                });
+            });
+
+            // Finalizar
+            $('.btn-finalizar').on('click', function () {
+                if (salvamentosPendentes > 0) {
+                    mostrarMensagem('Aguarde o salvamento das respostas terminar.', 'warning');
+                    return;
+                }
+                const respondidas = $('.questao-nav-btn.respondida').length;
+                if (respondidas < totalQuestoes) {
+                    if (!confirm(`Você respondeu ${respondidas} de ${totalQuestoes} questões. Deseja finalizar mesmo assim?`)) {
+                        return;
+                    }
+                }
+                finalizarProva();
+            });
+
+            function finalizarProva() {
+                if (finalizando) return;
+                finalizando = true;
+                $('.btn-finalizar, .btn-proxima, .btn-anterior, .btn-limpar, .alt-radio').prop('disabled', true);
+                $('#btnFinalizar').prop('disabled', true).html('Finalizando...');
+
+                $.post(`/prova/${token}/finalizar`, {
+                    tentativa: tentativa,
+                    __RequestVerificationToken: $('[name=__RequestVerificationToken]').val()
+                })
+                .done(function (resp) {
+                    if (resp.sucesso) {
+                        // Redirecionar para tela de confirmação
+                        window.location.href = '/prova/obrigado';
+                    } else {
+                        finalizando = false;
+                        mostrarMensagem(resp.erro || 'Erro ao finalizar.', 'error');
+                        $('#btnFinalizar').prop('disabled', false).html('✓ Finalizar Prova');
+                    }
+                })
+                .fail(function (xhr) {
+                    finalizando = false;
+                    mostrarMensagem('Erro ao finalizar a prova. Tente novamente.', 'error');
+                    $('#btnFinalizar').prop('disabled', false).html('✓ Finalizar Prova');
+                });
+            }
+
+            function atualizarModalProgresso() {
+                const respondidas = $('.alt-radio:checked').length;
+                $('#modalTotalRespondidas').text(respondidas);
+            }
+        });
+    </script>
+}

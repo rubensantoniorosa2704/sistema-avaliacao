@@ -1,0 +1,15 @@
+services:
+  sistema-avaliacao:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - bootstrap.env
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      SISTEMA_AVALIACAO_DB: /data/sistema_avaliacao.db
+      DATA_PROTECTION_KEYS_PATH: /data/keys
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data

@@ -1,0 +1,119 @@
+@model SistemaAvaliacao.Web.Models.ViewModels.RevisaoCorrecaoViewModel
+@using SistemaAvaliacao.Web.Models.Enums
+@{
+    ViewData["Title"] = "Revisar correção";
+}
+
+<div class="container-fluid py-3" style="max-width:1500px">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <a asp-action="Index" class="small text-muted"><i class="fas fa-arrow-left me-1"></i>Correções</a>
+            <h3 class="fw-bold mb-0 mt-1">Revisar correção</h3>
+            <div class="text-muted small">@Model.NomeProva · @Model.Folhas.Count folha(s) identificada(s)</div>
+        </div>
+        <span class="badge bg-warning text-dark">Revisão manual</span>
+    </div>
+
+    @if (TempData["Erro"] is string erro)
+    {
+        <div class="alert alert-danger">@erro</div>
+    }
+    @if (TempData["Sucesso"] is string sucesso)
+    {
+        <div class="alert alert-success">@sucesso</div>
+    }
+
+    <div class="row g-3" style="min-height:75vh">
+        <div class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-header bg-white fw-semibold"><i class="fas fa-file-pdf text-danger me-2"></i>Documento digitalizado</div>
+                <div class="card-body p-0">
+                    <iframe src="@Model.UrlPdf" title="PDF digitalizado" style="width:100%;height:72vh;border:0"></iframe>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <form asp-action="SalvarRevisao" method="post" class="card h-100">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="LoteId" value="@Model.LoteId" />
+                <div class="card-header bg-white fw-semibold">Leituras identificadas</div>
+                <div class="card-body overflow-auto" style="max-height:72vh">
+                    @if (!Model.Folhas.Any())
+                    {
+                        <div class="alert alert-warning small">Nenhuma folha foi identificada pelo QR Code.</div>
+                    }
+                    @{ var leituraIndex = 0; }
+                    @foreach (var folha in Model.Folhas)
+                    {
+                        <section class="border rounded p-3 mb-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <strong>@folha.NomeAluno</strong>
+                                <span class="small text-muted">Página @folha.NumeroPagina</span>
+                            </div>
+                            <div class="list-group list-group-flush">
+                                @foreach (var leitura in folha.Leituras)
+                                {
+                                    var classe = leitura.Status switch
+                                    {
+                                        StatusResposta.Valida => "list-group-item-success",
+                                        StatusResposta.Dupla => "list-group-item-danger",
+                                        StatusResposta.RasuraDuvidosa => "list-group-item-warning",
+                                        _ => "list-group-item-light"
+                                    };
+                                    <div class="list-group-item @classe px-2 py-2">
+                                        <div class="d-flex justify-content-between">
+                                            <span><strong>Q.@leitura.Ordem</strong> · @leitura.Status</span>
+                                            <span class="fw-bold">@(((leitura.AlternativaConfirmada ?? leitura.AlternativaDetectada)?.ToString()) ?? "—")</span>
+                                        </div>
+                                        <input type="hidden" name="Leituras[@leituraIndex].Id" value="@leitura.Id" />
+                                        <div class="row g-1 mt-2">
+                                            <div class="col-6">
+                                                <select class="form-select form-select-sm leitura-status" name="Leituras[@leituraIndex].Status">
+                                                    @foreach (var status in Enum.GetValues<StatusResposta>())
+                                                    {
+                                                        <option value="@status" selected="@(leitura.Status == status)">@status</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="col-6">
+                                                <select class="form-select form-select-sm leitura-alternativa" name="Leituras[@leituraIndex].AlternativaConfirmada" @(leitura.Status == StatusResposta.Valida ? "" : "disabled")>
+                                                    <option value="">Sem alternativa</option>
+                                                    @for (var letra = 'A'; letra < 'A' + Math.Clamp(leitura.NumeroAlternativas, 2, 5); letra++)
+                                                    {
+                                                        <option value="@letra" selected="@((leitura.AlternativaConfirmada ?? leitura.AlternativaDetectada) == letra)">@letra</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <input class="form-control form-control-sm mt-1" name="Leituras[@leituraIndex].Observacao" value="@leitura.Observacao" placeholder="Observação opcional" />
+                                    </div>
+                                    leituraIndex++;
+                                }
+                            </div>
+                        </section>
+                    }
+                </div>
+                <div class="card-footer bg-white d-flex gap-2 justify-content-end">
+                    <button type="submit" class="btn btn-outline-primary">Salvar revisão</button>
+                    <button type="submit" class="btn btn-success"
+                            formaction="@Url.Action("ConfirmarComRevisao", "Correcao")"
+                            onclick="return confirm('Confirmar o lote? As respostas serão gravadas definitivamente.');">
+                        <i class="fas fa-check me-1"></i>Confirmar lote
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.leitura-status').forEach(function (status) {
+            status.addEventListener('change', function () {
+                var alternativa = this.closest('.list-group-item').querySelector('.leitura-alternativa');
+                alternativa.disabled = this.value !== 'Valida';
+                if (alternativa.disabled) alternativa.value = '';
+            });
+        });
+    </script>
+}

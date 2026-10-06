@@ -1,0 +1,6 @@
+**/bin/
+**/obj/
+bootstrap.env
+data/*.db-shm
+data/*.db-wal
+wwwroot/uploads/

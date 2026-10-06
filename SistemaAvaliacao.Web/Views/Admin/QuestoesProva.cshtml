@@ -1,0 +1,389 @@
+@model SistemaAvaliacao.Web.Models.ViewModels.QuestoesProvaViewModel
+@{
+    ViewData["Title"] = $"Questões — {Model.NomeProva}";
+    var letras = new[] { 'A', 'B', 'C', 'D', 'E' };
+}
+
+<div class="container py-4" style="max-width:860px">
+
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a asp-action="Provas">Provas</a></li>
+            <li class="breadcrumb-item"><a asp-action="DetalhesProva" asp-route-id="@Model.ProvaId">@Model.NomeProva</a></li>
+            <li class="breadcrumb-item active">Questões</li>
+        </ol>
+    </nav>
+
+    @* Cabeçalho *@
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h4 class="fw-bold mb-0">@Model.NomeProva</h4>
+            @if (Model.Bloqueada)
+            {
+                <small class="text-danger"><i class="fas fa-lock me-1"></i>Prova iniciada — edição travada</small>
+            }
+            else
+            {
+                <small class="text-muted">
+                    <span class="fw-semibold">@Model.Questoes.Count questão(ões)</span>
+                </small>
+            }
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-primary" id="btnAbrirImportarDocx" data-bs-toggle="modal" data-bs-target="#modalImportarDocx" @if (Model.Bloqueada) { <text>disabled</text> }>
+                <i class="fas fa-file-excel me-1"></i>Importar planilha
+            </button>
+            <button type="button" class="btn btn-primary" id="btnNovaQuestao" @if (Model.Bloqueada) { <text>disabled</text> }>
+                <i class="fas fa-plus me-1"></i>Nova Questão
+            </button>
+        </div>
+    </div>
+
+    @* ═══════════ FORMULÁRIO DE CRIAÇÃO / EDIÇÃO ═══════════ *@
+    <div class="card mb-4 border-primary" id="formQuestao" style="display:none">
+        <div class="card-header bg-primary bg-opacity-10 d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-semibold text-primary" id="formTitulo">
+                <i class="fas fa-plus-circle me-1"></i>Nova Questão
+            </h6>
+            <button type="button" class="btn-close" id="btnCancelarForm" aria-label="Fechar"></button>
+        </div>
+        <div class="card-body">
+            <form asp-action="SalvarQuestaoProva" method="post" enctype="multipart/form-data" id="formSalvar">
+                <input type="hidden" name="ProvaId" value="@Model.ProvaId" />
+                <input type="hidden" name="QuestaoId" id="fieldQuestaoId" value="" />
+
+                @* Enunciado *@
+                <div class="mb-3">
+                    <label class="form-label">Enunciado <span class="text-muted fw-normal">(contexto, opcional)</span></label>
+                    <textarea class="form-control" name="Enunciado" id="fieldEnunciado" rows="2"
+                              placeholder="Texto introdutório, situação-problema..."></textarea>
+                </div>
+
+                @* Imagem *@
+                <div class="mb-3">
+                    <label class="form-label">Imagem <span class="text-muted fw-normal">(opcional, até 5 MB)</span></label>
+                    <input type="file" class="form-control" name="Imagem" id="fieldImagem"
+                           accept=".jpg,.jpeg,.png,.gif,.webp" />
+                    <div id="imagemPreview" class="mt-2" style="display:none">
+                        <img id="imagemPreviewImg" src="" alt="Preview" class="img-fluid rounded" style="max-height:160px" />
+                        <button type="button" class="btn btn-sm btn-outline-danger mt-1" id="btnRemoverImagem">
+                            <i class="fas fa-times me-1"></i>Remover
+                        </button>
+                    </div>
+                    <div id="imagemExistente" class="mt-2" style="display:none">
+                        <img id="imagemExistenteImg" src="" alt="Imagem atual" class="img-fluid rounded" style="max-height:160px" />
+                        <small class="text-muted d-block mt-1">Imagem atual — envie outra para substituir</small>
+                    </div>
+                </div>
+
+                @* Comando *@
+                <div class="mb-3">
+                    <label class="form-label">Comando <span class="text-danger">*</span></label>
+                    <textarea class="form-control" name="Comando" id="fieldComando" rows="2"
+                              placeholder="A pergunta que o aluno deve responder" required></textarea>
+                </div>
+
+                @* Alternativas *@
+                <div class="mb-3">
+                    <label class="form-label d-flex justify-content-between align-items-center">
+                        <span>Alternativas</span>
+                        <select class="form-select form-select-sm" name="NumeroAlternativas" id="fieldNumAlt" style="width:auto">
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5" selected>5</option>
+                        </select>
+                    </label>
+
+                    @for (int i = 0; i < 5; i++)
+                    {
+                        var letra = letras[i];
+                        var required = i < 2 ? "required" : "";
+                        <div class="input-group mb-2 alt-row" data-index="@i">
+                            <span class="input-group-text fw-bold" style="width:42px">@letra</span>
+                            <input type="text" class="form-control" name="Alternativa@(letra)" id="fieldAlt@(letra)"
+                                   placeholder="Texto da alternativa @letra" @required />
+                            <div class="input-group-text">
+                                <input class="form-check-input mt-0" type="radio" name="AlternativaCorreta"
+                                       value="@letra" id="radioCorreta@(letra)" @(i == 0 ? "checked" : "") title="Marcar como correta" />
+                            </div>
+                        </div>
+                    }
+                    <small class="text-muted"><i class="fas fa-check-circle me-1"></i>Selecione o rádio da alternativa correta</small>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary" id="btnSalvar">
+                        <i class="fas fa-check me-1"></i><span id="btnSalvarTexto">Adicionar Questão</span>
+                    </button>
+                    <button type="button" class="btn btn-light" id="btnCancelarForm2">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @* ═══════════ LISTA DE QUESTÕES ═══════════ *@
+    @if (!Model.Questoes.Any())
+    {
+        <div class="text-center py-5" id="emptyState">
+            <i class="fas fa-clipboard-list fa-3x text-muted mb-3 d-block"></i>
+            <p class="text-muted mb-1">Nenhuma questão adicionada.</p>
+            <p class="text-muted small">Clique em <strong>"Nova Questão"</strong> para começar.</p>
+        </div>
+    }
+    else
+    {
+        @foreach (var q in Model.Questoes)
+        {
+            var altTextos = new Dictionary<char, string?>
+            {
+                ['A'] = q.AlternativaA, ['B'] = q.AlternativaB, ['C'] = q.AlternativaC,
+                ['D'] = q.AlternativaD, ['E'] = q.AlternativaE
+            };
+
+            <div class="card mb-3 questao-card" id="questao-@q.QuestaoId">
+                <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center"
+                              style="width:28px;height:28px;font-size:.8rem">@q.Ordem</span>
+                        <span class="fw-semibold small">Questão @q.Ordem</span>
+                    </div>
+                    <div class="d-flex gap-1">
+                        @if (q.Ordem > 1)
+                        {
+                            <form asp-action="ReordenarQuestaoProva" method="post" class="d-inline">
+                                <input type="hidden" name="provaId" value="@Model.ProvaId" />
+                                <input type="hidden" name="questaoId" value="@q.QuestaoId" />
+                                <input type="hidden" name="direcao" value="cima" />
+                                <button type="submit" class="btn btn-sm btn-light" title="Subir"><i class="fas fa-chevron-up"></i></button>
+                            </form>
+                        }
+                        @if (q.Ordem < Model.Questoes.Count)
+                        {
+                            <form asp-action="ReordenarQuestaoProva" method="post" class="d-inline">
+                                <input type="hidden" name="provaId" value="@Model.ProvaId" />
+                                <input type="hidden" name="questaoId" value="@q.QuestaoId" />
+                                <input type="hidden" name="direcao" value="baixo" />
+                                <button type="submit" class="btn btn-sm btn-light" title="Descer"><i class="fas fa-chevron-down"></i></button>
+                            </form>
+                        }
+                        <button type="button" class="btn btn-sm btn-light btn-editar" data-id="@q.QuestaoId" title="Editar">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-light text-danger btn-excluir"
+                                data-id="@q.QuestaoId" data-ordem="@q.Ordem" data-comando="@q.Comando" title="Excluir">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card-body pt-3 pb-3">
+                    @if (!string.IsNullOrEmpty(q.Enunciado))
+                    {
+                        <p class="text-muted mb-2" style="white-space:pre-line">@q.Enunciado</p>
+                    }
+
+                    @if (!string.IsNullOrEmpty(q.ImagemUrl))
+                    {
+                        <div class="mb-2 text-center">
+                            <img src="@q.ImagemUrl" alt="Imagem da questão" class="img-fluid rounded" style="max-height:220px" />
+                        </div>
+                    }
+
+                    <p class="fw-medium mb-3" style="white-space:pre-line">@q.Comando</p>
+
+                    <div class="ps-1">
+                        @for (int i = 0; i < q.NumeroAlternativas; i++)
+                        {
+                            var l = letras[i];
+                            var texto = altTextos[l];
+                            var isCorreta = l == q.AlternativaCorreta;
+                            <div class="d-flex align-items-start gap-2 mb-1 py-1 px-2 rounded @(isCorreta ? "bg-success bg-opacity-10" : "")">
+                                <span class="fw-bold @(isCorreta ? "text-success" : "text-muted")" style="min-width:22px">@(l))</span>
+                                <span>@texto</span>
+                                @if (isCorreta)
+                                {
+                                    <i class="fas fa-check-circle text-success ms-auto mt-1" title="Correta"></i>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@* Modal de importação via planilha XLSX *@
+<div class="modal fade" id="modalImportarDocx" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="ImportarQuestoesDocx" method="post" enctype="multipart/form-data" id="formImportarDocx">
+                <input type="hidden" name="provaId" value="@Model.ProvaId" />
+                <div class="modal-header">
+                    <h6 class="modal-title fw-semibold"><i class="fas fa-file-excel text-success me-2"></i>Importar do Excel</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">
+                        Envie a planilha XLSX no padrão da importação oficial. A aba <strong>Itens</strong> deve conter as colunas
+                        <strong>numero_questao</strong>, <strong>comando</strong>, <strong>alternativa_a</strong>, <strong>alternativa_b</strong>
+                        e <strong>gabarito</strong>. Nada é gravado agora — a próxima tela é só para revisão final.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label">Planilha de questões (.xlsx) <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" name="arquivoXlsx" accept=".xlsx" required />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btnEnviarImportarDocx">
+                        <i class="fas fa-upload me-1"></i>Enviar e revisar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* Modal de exclusão *@
+<div class="modal fade" id="modalExcluir" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <i class="fas fa-exclamation-triangle text-danger fa-2x mb-3"></i>
+                <h6>Excluir questão <span id="modalOrdem"></span>?</h6>
+                <p class="text-muted small mb-3" id="modalComando"></p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <form asp-action="ExcluirQuestaoProva" method="post" id="formExcluir">
+                        <input type="hidden" name="provaId" value="@Model.ProvaId" />
+                        <input type="hidden" name="questaoId" id="excluirQuestaoId" />
+                        <button type="submit" class="btn btn-sm btn-danger">
+                            <i class="fas fa-trash-alt me-1"></i>Excluir
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            var $form = $('#formQuestao');
+
+            function toggleAlternativas() {
+                var n = parseInt($('#fieldNumAlt').val());
+                $('.alt-row').each(function () {
+                    var idx = parseInt($(this).data('index'));
+                    $(this).toggle(idx < n);
+                    if (idx >= n) $(this).find('input[type=text]').val('');
+                });
+            }
+            $('#fieldNumAlt').on('change', toggleAlternativas);
+            toggleAlternativas();
+
+            // ── Preview de imagem ao selecionar arquivo ──
+            $('#fieldImagem').on('change', function () {
+                var file = this.files[0];
+                if (file) {
+                    var reader = new FileReader();
+                    reader.onload = function (e) {
+                        $('#imagemPreviewImg').attr('src', e.target.result);
+                        $('#imagemPreview').show();
+                        $('#imagemExistente').hide();
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    $('#imagemPreview').hide();
+                }
+            });
+
+            $('#btnRemoverImagem').on('click', function () {
+                $('#fieldImagem').val('');
+                $('#imagemPreview').hide();
+            });
+
+            // ── Importar do Word (.docx) ──
+            $('#formImportarDocx').on('submit', function () {
+                $('#btnEnviarImportarDocx').prop('disabled', true)
+                    .html('<i class="fas fa-spinner fa-spin me-1"></i>Lendo documentos...');
+            });
+
+            // ── Nova questão ──
+            $('#btnNovaQuestao').on('click', function () {
+                resetForm();
+                $('#formTitulo').html('<i class="fas fa-plus-circle me-1"></i>Nova Questão');
+                $('#btnSalvarTexto').text('Adicionar Questão');
+                $form.slideDown(200);
+                $('#fieldComando').focus();
+                $('html,body').animate({ scrollTop: $form.offset().top - 80 }, 300);
+            });
+
+            $('#btnCancelarForm, #btnCancelarForm2').on('click', function () {
+                $form.slideUp(200);
+            });
+
+            // ── Editar questão ──
+            $(document).on('click', '.btn-editar', function () {
+                var id = $(this).data('id');
+                $.getJSON('@Url.Action("ObterQuestao", "Admin")', { id: id }, function (q) {
+                    resetForm();
+                    $('#fieldQuestaoId').val(q.id);
+                    $('#fieldEnunciado').val(q.enunciado || '');
+                    $('#fieldComando').val(q.comando);
+                    $('#fieldAltA').val(q.alternativaA);
+                    $('#fieldAltB').val(q.alternativaB);
+                    $('#fieldAltC').val(q.alternativaC || '');
+                    $('#fieldAltD').val(q.alternativaD || '');
+                    $('#fieldAltE').val(q.alternativaE || '');
+                    $('#fieldNumAlt').val(q.numeroAlternativas);
+                    $('input[name=AlternativaCorreta][value=' + q.alternativaCorreta + ']').prop('checked', true);
+                    toggleAlternativas();
+
+                    // Mostrar imagem existente se houver
+                    if (q.imagemUrl) {
+                        $('#imagemExistenteImg').attr('src', q.imagemUrl);
+                        $('#imagemExistente').show();
+                    }
+
+                    $('#formTitulo').html('<i class="fas fa-pen me-1"></i>Editar Questão');
+                    $('#btnSalvarTexto').text('Salvar Alterações');
+                    $form.slideDown(200);
+                    $('html,body').animate({ scrollTop: $form.offset().top - 80 }, 300);
+                    $('#fieldComando').focus();
+                });
+            });
+
+            // ── Excluir ──
+            $(document).on('click', '.btn-excluir', function () {
+                $('#excluirQuestaoId').val($(this).data('id'));
+                $('#modalOrdem').text($(this).data('ordem'));
+                var cmd = $(this).data('comando');
+                $('#modalComando').text(cmd.length > 120 ? cmd.substring(0, 120) + '...' : cmd);
+                new bootstrap.Modal('#modalExcluir').show();
+            });
+
+            function resetForm() {
+                $('#formSalvar')[0].reset();
+                $('#fieldQuestaoId').val('');
+                $('#fieldNumAlt').val(5);
+                $('input[name=AlternativaCorreta][value=A]').prop('checked', true);
+                $('#imagemPreview').hide();
+                $('#imagemExistente').hide();
+                toggleAlternativas();
+            }
+
+            @if (TempData["Sucesso"] != null)
+            {
+                <text>toastr.success('@Html.Raw(TempData["Sucesso"])');</text>
+            }
+            @if (TempData["Erro"] != null)
+            {
+                <text>toastr.error('@Html.Raw(TempData["Erro"])');</text>
+            }
+        });
+    </script>
+}

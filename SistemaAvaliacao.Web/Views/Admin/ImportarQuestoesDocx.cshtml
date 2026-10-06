@@ -1,0 +1,267 @@
+@model SistemaAvaliacao.Web.Models.ViewModels.ImportarQuestoesDocxViewModel
+@{
+    ViewData["Title"] = $"Revisar importação — {Model.NomeProva}";
+    var letras = new[] { 'A', 'B', 'C', 'D', 'E' };
+}
+
+<div class="container py-4" style="max-width:900px">
+
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a asp-action="Provas">Provas</a></li>
+            <li class="breadcrumb-item"><a asp-action="DetalhesProva" asp-route-id="@Model.ProvaId">@Model.NomeProva</a></li>
+            <li class="breadcrumb-item"><a asp-action="QuestoesProva" asp-route-id="@Model.ProvaId">Questões</a></li>
+            <li class="breadcrumb-item active">Revisar importação</li>
+        </ol>
+    </nav>
+
+    <div class="mb-4">
+        <h4 class="fw-bold mb-1"><i class="fas fa-file-excel text-success me-2"></i>Revisar importação da planilha</h4>
+        <small class="text-muted">
+            Arquivo <strong>@Model.NomeArquivo</strong>
+            @if (!string.IsNullOrWhiteSpace(Model.NomeArquivoGabarito))
+            {
+                <span> &middot; Gabarito <strong>@Model.NomeArquivoGabarito</strong></span>
+            }
+            &middot; <span class="fw-semibold">@Model.Itens.Count questão(ões) identificada(s)</span>
+        </small>
+    </div>
+
+    <div class="alert alert-warning d-flex align-items-start gap-2">
+        <i class="fas fa-exclamation-triangle mt-1"></i>
+        <div>
+            <strong>Nada foi gravado ainda.</strong> Revise cada questão abaixo, confirme o comando e as alternativas,
+            e valide a <strong>alternativa correta</strong> que veio da planilha. Desmarque "Incluir" para descartar uma questão.
+            Só clique em <strong>Confirmar e importar</strong> no final depois de revisar tudo.
+        </div>
+    </div>
+
+    @if (Model.Avisos.Any())
+    {
+        <div class="alert alert-info small">
+            <ul class="mb-0">
+                @foreach (var aviso in Model.Avisos)
+                {
+                    <li>@aviso</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <form asp-action="ConfirmarImportacaoDocx" method="post" id="formConfirmar" novalidate>
+        <input type="hidden" asp-for="ProvaId" />
+        <input type="hidden" asp-for="NomeProva" />
+        <input type="hidden" asp-for="NomeArquivo" />
+        <input type="hidden" asp-for="NomeArquivoGabarito" />
+
+        @for (int i = 0; i < Model.Itens.Count; i++)
+        {
+            var item = Model.Itens[i];
+            <div class="card mb-3 questao-import-card @(item.Problemas.Any() ? "border-warning" : "")" data-index="@i">
+                <input type="hidden" asp-for="Itens[i].Numero" />
+                <input type="hidden" asp-for="Itens[i].ImagemUrl" />
+                <input type="hidden" asp-for="Itens[i].ImagemEhTabela" />
+
+                <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-secondary rounded-circle d-flex align-items-center justify-content-center"
+                              style="width:28px;height:28px;font-size:.8rem">@item.Numero</span>
+                        <span class="fw-semibold small">Questão @item.Numero</span>
+                        @if (item.GabaritoAutomatico)
+                        {
+                            <span class="badge bg-success-subtle text-success border border-success-subtle ms-2">
+                                <i class="fas fa-check-double me-1"></i>Gabarito da planilha
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary ms-2">
+                                <i class="fas fa-pen me-1"></i>Gabarito manual
+                            </span>
+                        }
+                        @if (item.Problemas.Any())
+                        {
+                            <span class="badge bg-warning text-dark ms-2" title="@string.Join("; ", item.Problemas)">
+                                <i class="fas fa-triangle-exclamation me-1"></i>@item.Problemas.Count aviso(s)
+                            </span>
+                        }
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" asp-for="Itens[i].Incluir" id="incluir_@i" />
+                        <label class="form-check-label small" for="incluir_@i">Incluir</label>
+                    </div>
+                </div>
+
+                <div class="card-body item-conteudo">
+                    @if (item.Problemas.Any())
+                    {
+                        <div class="alert alert-warning small py-2 mb-3">
+                            @foreach (var p in item.Problemas)
+                            {
+                                <div><i class="fas fa-triangle-exclamation me-1"></i>@p</div>
+                            }
+                        </div>
+                    }
+
+                    <div class="mb-2">
+                        <label class="form-label small text-muted mb-1">Enunciado (contexto)</label>
+                        <textarea class="form-control form-control-sm" asp-for="Itens[i].Enunciado" rows="3"></textarea>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(item.ImagemUrl))
+                    {
+                        <div class="mb-3 text-center border rounded p-2 bg-light">
+                            <img src="@item.ImagemUrl" alt="@(item.ImagemEhTabela ? "Tabela extraída" : "Figura extraída")"
+                                 class="img-fluid rounded" style="max-height:280px;background:#fff" />
+                            <small class="text-muted d-block mt-1">
+                                <i class="fas @(item.ImagemEhTabela ? "fa-table" : "fa-image") me-1"></i>
+                                @(item.ImagemEhTabela ? "Tabela renderizada automaticamente — confira os valores contra a planilha." : "Figura associada na planilha.")
+                            </small>
+                        </div>
+                    }
+
+                    <div class="mb-2">
+                        <label class="form-label small text-muted mb-1">Comando <span class="text-danger">*</span></label>
+                        <textarea class="form-control form-control-sm" asp-for="Itens[i].Comando" rows="2" required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small text-muted d-flex justify-content-between align-items-center mb-1">
+                            <span>Alternativas</span>
+                            <select class="form-select form-select-sm fieldNumAlt" asp-for="Itens[i].NumeroAlternativas" style="width:auto">
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                            </select>
+                        </label>
+
+                        @for (int li = 0; li < 5; li++)
+                        {
+                            var letra = letras[li];
+                            <div class="input-group input-group-sm mb-1 alt-row" data-index="@li">
+                                <span class="input-group-text fw-bold" style="width:36px">@letra</span>
+                                @if (letra == 'A')
+                                {
+                                    <input type="text" class="form-control" asp-for="Itens[i].AlternativaA" placeholder="Texto da alternativa @letra" />
+                                }
+                                else if (letra == 'B')
+                                {
+                                    <input type="text" class="form-control" asp-for="Itens[i].AlternativaB" placeholder="Texto da alternativa @letra" />
+                                }
+                                else if (letra == 'C')
+                                {
+                                    <input type="text" class="form-control" asp-for="Itens[i].AlternativaC" placeholder="Texto da alternativa @letra" />
+                                }
+                                else if (letra == 'D')
+                                {
+                                    <input type="text" class="form-control" asp-for="Itens[i].AlternativaD" placeholder="Texto da alternativa @letra" />
+                                }
+                                else
+                                {
+                                    <input type="text" class="form-control" asp-for="Itens[i].AlternativaE" placeholder="Texto da alternativa @letra" />
+                                }
+                                <div class="input-group-text">
+                                    <input class="form-check-input mt-0 radio-correta" type="radio"
+                                           name="Itens[@i].AlternativaCorreta" value="@letra"
+                                           id="correta_@(i)_@letra"
+                                           @(item.AlternativaCorreta == letra ? "checked" : "")
+                                           title="Marcar como correta" required />
+                                </div>
+                            </div>
+                        }
+                        <small class="text-danger gabarito-aviso" style="display:none">
+                            <i class="fas fa-circle-exclamation me-1"></i>Selecione a alternativa correta.
+                        </small>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-md-8">
+                            <label class="form-label small text-muted mb-1">Fonte <span class="text-muted">(opcional)</span></label>
+                            <input type="text" class="form-control form-control-sm" asp-for="Itens[i].Fonte" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted mb-1">Descrição de acessibilidade</label>
+                            <input type="text" class="form-control form-control-sm" asp-for="Itens[i].DescricaoAcessibilidade" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="d-flex gap-2 sticky-bottom bg-white py-3 border-top">
+            <button type="submit" class="btn btn-success" id="btnConfirmar">
+                <i class="fas fa-check me-1"></i>Confirmar e importar
+            </button>
+            <a asp-action="QuestoesProva" asp-route-id="@Model.ProvaId" class="btn btn-light">Cancelar</a>
+            <span class="text-muted small align-self-center ms-2">
+                <span id="contadorIncluir">@Model.Itens.Count(i => i.Incluir)</span> de @Model.Itens.Count questão(ões) serão importadas
+            </span>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            function toggleAlternativas($card) {
+                var n = parseInt($card.find('.fieldNumAlt').val());
+                $card.find('.alt-row').each(function () {
+                    var idx = parseInt($(this).data('index'));
+                    $(this).toggle(idx < n);
+                });
+            }
+
+            $('.questao-import-card').each(function () {
+                toggleAlternativas($(this));
+            });
+
+            $(document).on('change', '.fieldNumAlt', function () {
+                toggleAlternativas($(this).closest('.questao-import-card'));
+            });
+
+            function atualizarContador() {
+                var n = $('.questao-import-card').filter(function () {
+                    return $(this).find('input[type=checkbox][id^=incluir_]').is(':checked');
+                }).length;
+                $('#contadorIncluir').text(n);
+            }
+
+            $(document).on('change', 'input[type=checkbox][id^=incluir_]', function () {
+                var $card = $(this).closest('.questao-import-card');
+                $card.find('.item-conteudo').toggle($(this).is(':checked'));
+                $card.toggleClass('opacity-50', !$(this).is(':checked'));
+                atualizarContador();
+            });
+            atualizarContador();
+
+            // Validação de gabarito antes de enviar: evita erro só depois do POST.
+            $('#formConfirmar').on('submit', function (e) {
+                var faltando = [];
+                $('.questao-import-card').each(function () {
+                    var incluido = $(this).find('input[type=checkbox][id^=incluir_]').is(':checked');
+                    if (!incluido) return;
+                    var marcado = $(this).find('.radio-correta:checked').length > 0;
+                    var $aviso = $(this).find('.gabarito-aviso');
+                    $aviso.toggle(!marcado);
+                    if (!marcado) faltando.push($(this).data('index'));
+                });
+                if (faltando.length > 0) {
+                    e.preventDefault();
+                    if (typeof toastr !== 'undefined') {
+                        toastr.error('Marque a alternativa correta em ' + faltando.length + ' questão(ões) antes de confirmar.');
+                    } else {
+                        alert('Marque a alternativa correta em ' + faltando.length + ' questão(ões) antes de confirmar.');
+                    }
+                    var $primeira = $('.questao-import-card[data-index="' + faltando[0] + '"]');
+                    $('html,body').animate({ scrollTop: $primeira.offset().top - 80 }, 300);
+                }
+            });
+
+            @if (TempData["Erro"] != null)
+            {
+                <text>toastr.error('@Html.Raw(TempData["Erro"])');</text>
+            }
+        });
+    </script>
+}

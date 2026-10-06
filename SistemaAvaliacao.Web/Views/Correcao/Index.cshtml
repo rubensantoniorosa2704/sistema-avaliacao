@@ -1,0 +1,68 @@
+@model List<SistemaAvaliacao.Web.Models.ViewModels.CorrecaoProvaItem>
+@{
+    ViewData["Title"] = "Correção de provas";
+}
+
+<div class="container py-4" style="max-width:1000px">
+    <div class="mb-4">
+        <h3 class="fw-bold mb-1">Correção de provas</h3>
+        <p class="text-muted mb-0">Selecione a prova e envie o PDF das folhas digitalizadas.</p>
+    </div>
+
+    @if (TempData["Sucesso"] is string sucesso)
+    {
+        <div class="alert alert-success"><i class="fas fa-check me-2"></i>@sucesso</div>
+    }
+    @if (TempData["Erro"] is string erro)
+    {
+        <div class="alert alert-danger"><i class="fas fa-circle-exclamation me-2"></i>@erro</div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">Nenhuma prova disponível.</div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var prova in Model)
+            {
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title fw-bold">@prova.Nome</h5>
+                            <div class="small text-muted mb-3">
+                                @prova.NumeroQuestoes questões · @prova.NumeroAlunos alunos · @prova.LotesRecebidos lote(s)
+                            </div>
+                            @if (prova.UltimoLoteId.HasValue)
+                            {
+                                <div class="small mb-3">
+                                    Status: <span class="badge bg-secondary">@prova.StatusUltimoLote</span>
+                                </div>
+                            }
+                            <a asp-action="Enviar" asp-route-id="@prova.Id" class="btn btn-primary mt-auto">
+                                <i class="fas fa-file-arrow-up me-2"></i>Enviar correção
+                            </a>
+                            @if (prova.UltimoLoteId.HasValue && prova.StatusUltimoLote == SistemaAvaliacao.Web.Models.Enums.StatusProcessamentoCorrecao.AguardandoRevisao)
+                            {
+                                <a asp-action="Revisar" asp-route-id="@prova.UltimoLoteId" class="btn btn-outline-secondary mt-2">
+                                    <i class="fas fa-list-check me-2"></i>Revisar lote
+                                </a>
+                            }
+                            @if (prova.LotesRecebidos > 0)
+                            {
+                                <form asp-action="LimparLotes" asp-route-id="@prova.Id" method="post" class="mt-2"
+                                      onsubmit="return confirm('Apagar todos os lotes NÃO confirmados desta prova? Esta ação não pode ser desfeita.');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                                        <i class="fas fa-trash-can me-1"></i>Limpar lotes de teste
+                                    </button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

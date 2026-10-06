@@ -1,0 +1,63 @@
+@model SistemaAvaliacao.Web.Models.ViewModels.IdentificacaoViewModel
+@{
+    ViewData["Title"] = "Acessar Prova";
+    Layout = "~/Views/Shared/_LayoutExame.cshtml";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h5 class="card-title fw-bold mb-1">@Model.NomeProva</h5>
+                    @if (!string.IsNullOrEmpty(Model.Descricao))
+                    {
+                        <p class="text-muted small mb-4">@Model.Descricao</p>
+                    }
+                    else
+                    {
+                        <p class="text-muted small mb-4">Digite seus dados para acessar a prova</p>
+                    }
+
+                    <form asp-action="Identificar" asp-route-token="@Model.Token" method="post">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger small" style="display:none"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="EmailForm" class="form-label">E-mail <span class="text-danger">*</span></label>
+                            <input asp-for="EmailForm" class="form-control" placeholder="seu@email.com" autofocus />
+                            <span asp-validation-for="EmailForm" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="CPF" class="form-label">CPF <span class="text-danger">*</span></label>
+                            <input asp-for="CPF" class="form-control" placeholder="000.000.000-00" />
+                            <span asp-validation-for="CPF" class="text-danger small"></span>
+                        </div>
+
+                        @if (ViewData.ModelState[""]?.Errors.Count > 0)
+                        {
+                            <div class="alert alert-danger small mb-3">
+                                @foreach (var erro in ViewData.ModelState[""].Errors)
+                                {
+                                    <div>@erro.ErrorMessage</div>
+                                }
+                            </div>
+                        }
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-sign-in-alt me-1"></i>Acessar Prova
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <p class="text-center text-muted small mt-4">
+                <i class="fas fa-lock me-1"></i>Conexão segura. Seus dados não serão compartilhados.
+            </p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

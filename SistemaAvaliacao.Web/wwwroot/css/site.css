@@ -1,0 +1,127 @@
+/* ══════════════════════════════════════════════
+   Sistema de Avaliação — Global Styles
+   ══════════════════════════════════════════════ */
+
+html { font-size: 14px; }
+@media (min-width: 768px) { html { font-size: 15px; } }
+
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background-color: #f5f7fa;
+    color: #2d3748;
+}
+
+/* ── Focus rings ── */
+.btn:focus-visible,
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(37, 140, 251, .25);
+}
+
+/* ── Cards ── */
+.card {
+    border: 1px solid #e2e8f0;
+    border-radius: .5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+    transition: box-shadow .15s;
+}
+
+.card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,.07);
+}
+
+.card-header {
+    border-bottom: 1px solid #e2e8f0;
+}
+
+/* ── Tabelas ── */
+.table > thead > tr > th {
+    font-weight: 600;
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: #718096;
+    border-bottom-width: 1px;
+}
+
+.table > tbody > tr > td {
+    vertical-align: middle;
+}
+
+/* ── Badges discretos ── */
+.badge {
+    font-weight: 500;
+}
+
+/* ── Questão card ── */
+.questao-card {
+    transition: border-color .15s;
+}
+
+.questao-card:hover {
+    border-color: #93c5fd;
+}
+
+.questao-card .card-header .btn {
+    opacity: .5;
+    transition: opacity .15s;
+}
+
+.questao-card:hover .card-header .btn {
+    opacity: 1;
+}
+
+/* ── Breadcrumbs ── */
+.breadcrumb {
+    background: transparent;
+    padding: 0;
+    margin: 0;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: "›";
+}
+
+/* ── Form sections ── */
+.card-title {
+    font-size: .85rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+/* ── Select2 adjustments ── */
+.select2-container--bootstrap-5 .select2-selection {
+    min-height: 38px;
+}
+
+/* ── Navbar ── */
+.navbar-dark .nav-link {
+    opacity: .8;
+    transition: opacity .15s;
+}
+
+.navbar-dark .nav-link:hover,
+.navbar-dark .nav-link.active {
+    opacity: 1;
+}
+
+/* ── Toastr overrides ── */
+#toast-container > .toast-success { background-color: #38a169; }
+#toast-container > .toast-error { background-color: #e53e3e; }
+
+/* ── Smooth transitions for form ── */
+.card[style*="display: none"],
+.card[style*="display:none"] {
+    opacity: 0;
+}
+
+/* ── Empty states ── */
+.text-center .fa-3x {
+    opacity: .4;
+}
+
+/* ── Footer ── */
+footer {
+    font-size: .8rem;
+}

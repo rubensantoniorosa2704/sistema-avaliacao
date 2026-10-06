@@ -1,0 +1,153 @@
+@model SistemaAvaliacao.Web.Models.ViewModels.ListarProvasViewModel
+@{
+    ViewData["Title"] = "Provas";
+}
+
+<div class="container py-4">
+
+    @* Cabeçalho *@
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h3 class="mb-0 fw-bold">Provas</h3>
+            <small class="text-muted">@Model.Provas.Count prova(s) cadastrada(s)</small>
+        </div>
+        <a asp-action="CriarProva" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>Nova Prova
+        </a>
+    </div>
+
+    @* Filtro de busca *@
+    <form method="get" asp-action="Provas" class="card card-body bg-light border-0 mb-4">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-10">
+                <label class="form-label small text-muted mb-1">Buscar</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" class="form-control" name="buscaNome" value="@Model.BuscaNome"
+                           placeholder="Nome da prova..." />
+                </div>
+            </div>
+            <div class="col-md-2 d-grid">
+                <button type="submit" class="btn btn-outline-secondary">
+                    <i class="fas fa-filter me-1"></i>Filtrar
+                </button>
+            </div>
+        </div>
+    </form>
+
+    @* Lista *@
+    @if (!Model.Provas.Any())
+    {
+        <div class="text-center py-5">
+            <i class="fas fa-file-alt fa-3x text-muted mb-3 d-block"></i>
+            <p class="text-muted mb-3">Nenhuma prova encontrada.</p>
+            <a asp-action="CriarProva" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Criar primeira prova
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="min-width:300px">Prova</th>
+                        <th class="text-center" style="width:100px">Questões</th>
+                        <th class="text-center" style="width:100px">Alunos</th>
+                        <th class="text-center" style="width:120px">Status</th>
+                        <th class="text-end" style="width:150px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var prova in Model.Provas)
+                    {
+                        <tr>
+                            <td>
+                                <a asp-action="DetalhesProva" asp-route-id="@prova.Id"
+                                   class="fw-semibold text-decoration-none text-dark d-block">
+                                    @prova.Nome
+                                </a>
+                                <small class="text-muted">
+                                    @prova.DataInicio.ParaFusoLocal().ToString("dd/MM/yyyy HH:mm") — 
+                                    @prova.DataFim.ParaFusoLocal().ToString("dd/MM/yyyy HH:mm")
+                                </small>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary">@prova.NumeroQuestoes</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge rounded-pill bg-secondary bg-opacity-10 text-secondary">@prova.NumeroAlunos</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-@prova.StatusClass">@prova.Status</span>
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <a asp-action="QuestoesProva" asp-route-id="@prova.Id"
+                                       class="btn btn-outline-primary" title="Questões">
+                                        <i class="fas fa-list-ol"></i>
+                                    </a>
+                                    <a asp-action="DetalhesProva" asp-route-id="@prova.Id"
+                                       class="btn btn-outline-secondary" title="Detalhes">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger"
+                                            data-bs-toggle="modal" data-bs-target="#modalExcluir-@prova.Id"
+                                            title="Excluir">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @* Modais de exclusão *@
+        @foreach (var prova in Model.Provas)
+        {
+            <div class="modal fade" id="modalExcluir-@prova.Id" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-sm modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-body text-center py-4">
+                            <i class="fas fa-exclamation-triangle text-danger fa-2x mb-3"></i>
+                            <h6>Excluir prova?</h6>
+                            <p class="text-muted small mb-3">@prova.Nome</p>
+                            @if (prova.NumeroQuestoes > 0 || prova.NumeroAlunos > 0)
+                            {
+                                <p class="small text-warning mb-3">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    @prova.NumeroQuestoes questão(ões) e @prova.NumeroAlunos aluno(s) serão desvinculados.
+                                </p>
+                            }
+                            <div class="d-flex gap-2 justify-content-center">
+                                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancelar</button>
+                                <form asp-action="ExcluirProva" method="post" class="d-inline">
+                                    <input type="hidden" name="id" value="@prova.Id" />
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        <i class="fas fa-trash-alt me-1"></i>Excluir
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@section Scripts {
+    <script>
+        @if (TempData["Sucesso"] != null)
+        {
+            <text>toastr.success('@Html.Raw(TempData["Sucesso"])');</text>
+        }
+        @if (TempData["Erro"] != null)
+        {
+            <text>toastr.error('@Html.Raw(TempData["Erro"])');</text>
+        }
+    </script>
+}

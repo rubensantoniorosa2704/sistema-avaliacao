@@ -1,0 +1,7 @@
+**/bin
+**/obj
+.git
+.gitignore
+bootstrap.env
+*.db-shm
+*.db-wal
