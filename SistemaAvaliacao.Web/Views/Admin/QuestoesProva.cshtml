@@ -30,7 +30,7 @@
             }
         </div>
         <div class="d-flex gap-2">
-            <button type="button" class="btn btn-outline-primary" id="btnAbrirImportarDocx" data-bs-toggle="modal" data-bs-target="#modalImportarDocx" @if (Model.Bloqueada) { <text>disabled</text> }>
+            <button type="button" class="btn btn-outline-primary" id="btnAbrirImportarXlsx" data-bs-toggle="modal" data-bs-target="#modalImportarXlsx" @if (Model.Bloqueada) { <text>disabled</text> }>
                 <i class="fas fa-file-excel me-1"></i>Importar planilha
             </button>
             <button type="button" class="btn btn-primary" id="btnNovaQuestao" @if (Model.Bloqueada) { <text>disabled</text> }>
@@ -215,10 +215,10 @@
 </div>
 
 @* Modal de importação via planilha XLSX *@
-<div class="modal fade" id="modalImportarDocx" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalImportarXlsx" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form asp-action="ImportarQuestoesDocx" method="post" enctype="multipart/form-data" id="formImportarDocx">
+            <form asp-action="ImportarQuestoesXlsx" method="post" enctype="multipart/form-data" id="formImportarXlsx">
                 <input type="hidden" name="provaId" value="@Model.ProvaId" />
                 <div class="modal-header">
                     <h6 class="modal-title fw-semibold"><i class="fas fa-file-excel text-success me-2"></i>Importar do Excel</h6>
@@ -237,7 +237,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary" id="btnEnviarImportarDocx">
+                    <button type="submit" class="btn btn-primary" id="btnEnviarImportarXlsx">
                         <i class="fas fa-upload me-1"></i>Enviar e revisar
                     </button>
                 </div>
@@ -306,10 +306,10 @@
                 $('#imagemPreview').hide();
             });
 
-            // ── Importar do Word (.docx) ──
-            $('#formImportarDocx').on('submit', function () {
-                $('#btnEnviarImportarDocx').prop('disabled', true)
-                    .html('<i class="fas fa-spinner fa-spin me-1"></i>Lendo documentos...');
+            // ── Importar da planilha (.xlsx) ──
+            $('#formImportarXlsx').on('submit', function () {
+                $('#btnEnviarImportarXlsx').prop('disabled', true)
+                    .html('<i class="fas fa-spinner fa-spin me-1"></i>Lendo planilha...');
             });
 
             // ── Nova questão ──

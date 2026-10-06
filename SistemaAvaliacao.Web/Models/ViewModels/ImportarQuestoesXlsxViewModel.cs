@@ -58,7 +58,7 @@ public class ImportarQuestaoItem
 }
 
 /// <summary>ViewModel da tela de revisão/edição do preview de importação.</summary>
-public class ImportarQuestoesDocxViewModel
+public class ImportarQuestoesXlsxViewModel
 {
     public Guid ProvaId { get; set; }
     public string NomeProva { get; set; } = string.Empty;

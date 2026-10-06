@@ -1,4 +1,4 @@
-@model SistemaAvaliacao.Web.Models.ViewModels.ImportarQuestoesDocxViewModel
+@model SistemaAvaliacao.Web.Models.ViewModels.ImportarQuestoesXlsxViewModel
 @{
     ViewData["Title"] = $"Revisar importação — {Model.NomeProva}";
     var letras = new[] { 'A', 'B', 'C', 'D', 'E' };
@@ -48,7 +48,7 @@
         </div>
     }
 
-    <form asp-action="ConfirmarImportacaoDocx" method="post" id="formConfirmar" novalidate>
+    <form asp-action="ConfirmarImportacaoXlsx" method="post" id="formConfirmar" novalidate>
         <input type="hidden" asp-for="ProvaId" />
         <input type="hidden" asp-for="NomeProva" />
         <input type="hidden" asp-for="NomeArquivo" />

@@ -541,7 +541,7 @@ public class AdminController : Controller
     // ───────────────────── Importação de questões via XLSX ─────────────────────
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> ImportarQuestoesDocx(Guid provaId, IFormFile? arquivoXlsx)
+    public async Task<IActionResult> ImportarQuestoesXlsx(Guid provaId, IFormFile? arquivoXlsx)
     {
         var prova = await _context.Provas.FindAsync(provaId);
         if (prova == null) return NotFound();
@@ -577,7 +577,7 @@ public class AdminController : Controller
             return RedirectToAction(nameof(QuestoesProva), new { id = provaId });
         }
 
-        return View("ImportarQuestoesDocx", new ImportarQuestoesDocxViewModel
+        return View("ImportarQuestoesXlsx", new ImportarQuestoesXlsxViewModel
         {
             ProvaId = provaId,
             NomeProva = prova.Nome,
@@ -589,7 +589,7 @@ public class AdminController : Controller
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> ConfirmarImportacaoDocx(ImportarQuestoesDocxViewModel model)
+    public async Task<IActionResult> ConfirmarImportacaoXlsx(ImportarQuestoesXlsxViewModel model)
     {
         var prova = await _context.Provas.FindAsync(model.ProvaId);
         if (prova == null) return NotFound();
@@ -622,7 +622,7 @@ public class AdminController : Controller
 
             TempData["Erro"] = $"Revise antes de confirmar: {string.Join("; ", partes)}.";
             model.NomeProva = prova.Nome;
-            return View("ImportarQuestoesDocx", model);
+            return View("ImportarQuestoesXlsx", model);
         }
 
         var inseridas = await _xlsxImport.ConfirmarAsync(model.ProvaId, itensParaGravar);
