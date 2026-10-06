@@ -1,14 +1,52 @@
 /* ══════════════════════════════════════════════
    Sistema de Avaliação — Global Styles
+
+   Organização:
+     1. Tokens (variáveis CSS) — único lugar para cores, raios e sombras
+     2. Base e componentes globais (Bootstrap ajustado)
+     3. Overrides de bibliotecas (Select2, Toastr)
+
+   Estilos de uma tela específica NÃO ficam em <style> dentro da view:
+   vão para um arquivo próprio em wwwroot/css (ex.: exame.css), e só quando
+   o estilo for realmente específico daquela tela.
    ══════════════════════════════════════════════ */
 
+/* ── 1. Tokens ── */
+:root {
+    /* Superfícies e texto */
+    --app-bg: #f5f7fa;
+    --app-text: #2d3748;
+    --app-text-muted: #718096;
+    --app-border: #e2e8f0;
+
+    /* Estados */
+    --app-success: #38a169;
+    --app-danger: #e53e3e;
+    --app-hover-border: #93c5fd;
+    --app-focus-ring: rgba(37, 140, 251, .25);
+
+    /* Paleta das telas de prova (responder e imprimir) */
+    --app-ink: #172033;
+    --app-slate: #64748b;
+    --app-line: #dbe3ef;
+    --app-accent: #2563eb;
+    --app-accent-soft: #eff6ff;
+    --app-success-strong: #16803c;
+
+    /* Forma */
+    --app-radius: .5rem;
+    --app-shadow-sm: 0 1px 3px rgba(0,0,0,.04);
+    --app-shadow-md: 0 2px 8px rgba(0,0,0,.07);
+}
+
+/* ── 2. Base e componentes globais ── */
 html { font-size: 14px; }
 @media (min-width: 768px) { html { font-size: 15px; } }
 
 body {
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background-color: #f5f7fa;
-    color: #2d3748;
+    background-color: var(--app-bg);
+    color: var(--app-text);
 }
 
 /* ── Focus rings ── */
@@ -16,23 +54,23 @@ body {
 .form-control:focus,
 .form-select:focus,
 .form-check-input:focus {
-    box-shadow: 0 0 0 0.2rem rgba(37, 140, 251, .25);
+    box-shadow: 0 0 0 0.2rem var(--app-focus-ring);
 }
 
 /* ── Cards ── */
 .card {
-    border: 1px solid #e2e8f0;
-    border-radius: .5rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+    box-shadow: var(--app-shadow-sm);
     transition: box-shadow .15s;
 }
 
 .card:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,.07);
+    box-shadow: var(--app-shadow-md);
 }
 
 .card-header {
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--app-border);
 }
 
 /* ── Tabelas ── */
@@ -41,7 +79,7 @@ body {
     font-size: .8rem;
     text-transform: uppercase;
     letter-spacing: .03em;
-    color: #718096;
+    color: var(--app-text-muted);
     border-bottom-width: 1px;
 }
 
@@ -60,7 +98,7 @@ body {
 }
 
 .questao-card:hover {
-    border-color: #93c5fd;
+    border-color: var(--app-hover-border);
 }
 
 .questao-card .card-header .btn {
@@ -90,11 +128,6 @@ body {
     letter-spacing: .04em;
 }
 
-/* ── Select2 adjustments ── */
-.select2-container--bootstrap-5 .select2-selection {
-    min-height: 38px;
-}
-
 /* ── Navbar ── */
 .navbar-dark .nav-link {
     opacity: .8;
@@ -105,10 +138,6 @@ body {
 .navbar-dark .nav-link.active {
     opacity: 1;
 }
-
-/* ── Toastr overrides ── */
-#toast-container > .toast-success { background-color: #38a169; }
-#toast-container > .toast-error { background-color: #e53e3e; }
 
 /* ── Smooth transitions for form ── */
 .card[style*="display: none"],
@@ -125,3 +154,14 @@ body {
 footer {
     font-size: .8rem;
 }
+
+/* ── 3. Overrides de bibliotecas ── */
+
+/* Select2 */
+.select2-container--bootstrap-5 .select2-selection {
+    min-height: 38px;
+}
+
+/* Toastr */
+#toast-container > .toast-success { background-color: var(--app-success); }
+#toast-container > .toast-error { background-color: var(--app-danger); }
