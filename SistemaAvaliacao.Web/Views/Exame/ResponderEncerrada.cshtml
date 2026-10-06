@@ -1,29 +1,21 @@
-@model SistemaAvaliacao.Web.Models.ViewModels.ResponderProvaViewModel
+@model ResponderProvaViewModel
 @{
     ViewData["Title"] = "Prova Encerrada";
     Layout = "~/Views/Shared/_LayoutExame.cshtml";
 }
 
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-5">
-            <div class="card shadow-sm border-secondary">
-                <div class="card-body p-4 text-center">
-                    <i class="fas fa-clock fa-3x text-secondary mb-3"></i>
-                    <h5 class="card-title fw-bold mb-1">@Model.NomeProva</h5>
-
-                    <p class="text-muted small mb-4">O prazo para responder esta prova expirou.</p>
-
-                    <div class="alert alert-secondary small">
-                        <strong>Prova encerrada em:</strong><br />
-                        @Model.DataFim.ParaFusoLocal().ToString("dd/MM/yyyy \\à\\s HH:mm")
-                    </div>
-
-                    <a href="/" class="btn btn-outline-secondary btn-sm mt-3">
-                        <i class="fas fa-home me-1"></i>Voltar
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+@await Html.PartialAsync("_PaginaEstado", new PaginaEstadoViewModel
+{
+    Variante = "secondary",
+    Icone = "fa-clock",
+    Titulo = Model.NomeProva,
+    Subtitulo = "O prazo para responder esta prova expirou.",
+    Destaque = new DestaqueEstado
+    {
+        Variante = "secondary",
+        Rotulo = "Prova encerrada em:",
+        Texto = Model.DataFim.ParaFusoLocal().ToString("dd/MM/yyyy \\à\\s HH:mm")
+    },
+    BotaoTexto = "Voltar",
+    BotaoUrl = "/"
+})

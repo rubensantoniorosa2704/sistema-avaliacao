@@ -1,0 +1,61 @@
+@model PaginaEstadoViewModel
+
+@*
+    Componente reutilizável: card de estado centralizado (ícone + título + mensagens + ação).
+    Uso:
+        @await Html.PartialAsync("_PaginaEstado", new PaginaEstadoViewModel { ... })
+    Substitui o esqueleto que estava duplicado nas telas de confirmação/erro do exame.
+    Todos os campos são codificados em HTML, exceto DetalheHtml (ver o viewmodel).
+*@
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow-sm border-@Model.Variante">
+                <div class="card-body p-4 text-center">
+                    <i class="fas @Model.Icone fa-3x text-@Model.Variante mb-3"></i>
+                    <h5 class="card-title fw-bold mb-1">@Model.Titulo</h5>
+
+                    @if (!string.IsNullOrEmpty(Model.Subtitulo))
+                    {
+                        <p class="text-muted small mb-4">@Model.Subtitulo</p>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.Mensagem))
+                    {
+                        <p class="text-muted mb-0">
+                            @{
+                                var linhas = Model.Mensagem.Split('\n');
+                            }
+                            @for (var i = 0; i < linhas.Length; i++)
+                            {
+                                if (i > 0) { <br /> }
+                                @linhas[i]
+                            }
+                        </p>
+                    }
+
+                    @if (Model.Destaque is not null)
+                    {
+                        <div class="alert alert-@Model.Destaque.Variante small mb-3">
+                            <strong>@Model.Destaque.Rotulo</strong><br />
+                            @Model.Destaque.Texto
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.DetalheHtml))
+                    {
+                        <p class="small text-muted mb-0">@Html.Raw(Model.DetalheHtml)</p>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.BotaoTexto) && !string.IsNullOrEmpty(Model.BotaoUrl))
+                    {
+                        <a href="@Model.BotaoUrl" class="btn btn-outline-secondary btn-sm mt-3">
+                            <i class="fas fa-home me-1"></i>@Model.BotaoTexto
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

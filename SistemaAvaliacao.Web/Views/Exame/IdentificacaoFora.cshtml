@@ -1,40 +1,32 @@
-@model SistemaAvaliacao.Web.Models.ViewModels.IdentificacaoViewModel
+@model IdentificacaoViewModel
 @{
     ViewData["Title"] = "Prova Indisponível";
     Layout = "~/Views/Shared/_LayoutExame.cshtml";
     var éFuturo = Model.Status == "AgendadaPara";
+    var formato = "dd/MM/yyyy \\à\\s HH:mm";
 }
 
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-5">
-            <div class="card shadow-sm border-warning">
-                <div class="card-body p-4 text-center">
-                    <i class="fas fa-@(éFuturo ? "calendar" : "clock") fa-3x text-warning mb-3"></i>
-                    <h5 class="card-title fw-bold mb-1">@Model.NomeProva</h5>
-
-                    @if (éFuturo)
-                    {
-                        <p class="text-muted small mb-4">Esta prova ainda não está disponível.</p>
-                        <div class="alert alert-info small mb-3">
-                            <strong>Disponível a partir de:</strong><br />
-                            @Model.DataInicio.ParaFusoLocal().ToString("dd/MM/yyyy \\à\\s HH:mm")
-                        </div>
-                    }
-                    else
-                    {
-                        <p class="text-muted small mb-4">O prazo para responder esta prova expirou.</p>
-                        <div class="alert alert-warning small">
-                            <strong>Encerrada em:</strong><br />
-                            @Model.DataFim.ParaFusoLocal().ToString("dd/MM/yyyy \\à\\s HH:mm")
-                        </div>
-                    }
-
-                    <a href="/" class="btn btn-outline-secondary btn-sm mt-3">
-                        <i class="fas fa-home me-1"></i>Voltar
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+@await Html.PartialAsync("_PaginaEstado", new PaginaEstadoViewModel
+{
+    Variante = "warning",
+    Icone = éFuturo ? "fa-calendar" : "fa-clock",
+    Titulo = Model.NomeProva,
+    Subtitulo = éFuturo
+        ? "Esta prova ainda não está disponível."
+        : "O prazo para responder esta prova expirou.",
+    Destaque = éFuturo
+        ? new DestaqueEstado
+        {
+            Variante = "info",
+            Rotulo = "Disponível a partir de:",
+            Texto = Model.DataInicio.ParaFusoLocal().ToString(formato)
+        }
+        : new DestaqueEstado
+        {
+            Variante = "warning",
+            Rotulo = "Encerrada em:",
+            Texto = Model.DataFim.ParaFusoLocal().ToString(formato)
+        },
+    BotaoTexto = "Voltar",
+    BotaoUrl = "/"
+})

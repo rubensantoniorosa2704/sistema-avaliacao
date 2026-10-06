@@ -1,32 +1,23 @@
-@model SistemaAvaliacao.Web.Models.ViewModels.IdentificacaoViewModel
+@model IdentificacaoViewModel
 @{
     ViewData["Title"] = "Prova Já Iniciada";
     Layout = "~/Views/Shared/_LayoutExame.cshtml";
 }
 
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-5">
-            <div class="card shadow-sm border-info">
-                <div class="card-body p-4 text-center">
-                    <i class="fas fa-info-circle fa-3x text-info mb-3"></i>
-                    <h5 class="card-title fw-bold mb-1">@Model.NomeProva</h5>
-
-                    <p class="text-muted small mb-4">Você já iniciou esta prova.</p>
-                    <div class="alert alert-info small mb-3">
-                        <strong>E-mail:</strong> @Model.Email
-                    </div>
-
-                    <p class="text-muted small">
-                        A prova é de <strong>uma única tentativa</strong>. Se você saiu da tela, a tentativa foi encerrada.
-                        Contate o administrador se precisar de ajuda.
-                    </p>
-
-                    <a href="/" class="btn btn-outline-secondary btn-sm mt-3">
-                        <i class="fas fa-home me-1"></i>Voltar
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+@* O e-mail vem do formulário do usuário: vai em Destaque.Texto, que é sempre codificado em HTML. *@
+@await Html.PartialAsync("_PaginaEstado", new PaginaEstadoViewModel
+{
+    Variante = "info",
+    Icone = "fa-info-circle",
+    Titulo = Model.NomeProva,
+    Subtitulo = "Você já iniciou esta prova.",
+    Destaque = new DestaqueEstado
+    {
+        Variante = "info",
+        Rotulo = "E-mail:",
+        Texto = Model.Email ?? string.Empty
+    },
+    DetalheHtml = "A prova é de <strong>uma única tentativa</strong>. Se você saiu da tela, a tentativa foi encerrada. Contate o administrador se precisar de ajuda.",
+    BotaoTexto = "Voltar",
+    BotaoUrl = "/"
+})
