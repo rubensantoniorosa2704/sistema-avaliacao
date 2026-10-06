@@ -4,9 +4,9 @@
 }
 
 @*
-    Uma questão da prova, carregada sob demanda (lazy loading via htmx).
+    Uma questão da prova, carregada sob demanda (lazy loading).
     O endpoint GET /prova/{token}/questao/{ordem} devolve exatamente este fragmento,
-    e o htmx o encaixa no container #questao-atual.
+    e o JS da tela de resposta o encaixa no container #questao-atual.
 *@
 <div class="questao-card ativa" data-ordem="@Model.Ordem" data-questao-id="@Model.QuestaoId">
     <div class="mb-3">

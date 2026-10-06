@@ -225,7 +225,7 @@ public class ExameController : Controller
     }
 
     /// <summary>
-    /// Devolve o fragmento HTML de uma questão (lazy loading via htmx).
+    /// Devolve o fragmento HTML de uma questão (lazy loading).
     /// GET /prova/{token}/questao/{ordem}?tentativa={tokenTentativa}
     /// </summary>
     [HttpGet("prova/{token}/questao/{ordem:int}")]

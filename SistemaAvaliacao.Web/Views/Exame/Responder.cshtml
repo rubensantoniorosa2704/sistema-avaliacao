@@ -85,8 +85,8 @@
         <div class="exame-question-area">
             @*
                 Só a primeira questão vem renderizada. As demais são carregadas sob demanda
-                (lazy loading): a navegação dispara um GET que troca o conteúdo deste container.
-                O indicador de carregamento aparece enquanto o htmx busca o fragmento.
+                (lazy loading): a navegação faz um fetch que troca o conteúdo deste container.
+                O indicador de carregamento aparece enquanto a questão é buscada.
             *@
             <div id="questao-atual"
                  data-token="@Model.Token"
