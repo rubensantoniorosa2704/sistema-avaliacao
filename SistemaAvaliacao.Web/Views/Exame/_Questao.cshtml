@@ -1,0 +1,83 @@
+@model SistemaAvaliacao.Web.Models.ViewModels.QuestaoParaResponderItem
+@{
+    var totalQuestoes = (int)ViewData["TotalQuestoes"]!;
+}
+
+@*
+    Uma questão da prova, carregada sob demanda (lazy loading via htmx).
+    O endpoint GET /prova/{token}/questao/{ordem} devolve exatamente este fragmento,
+    e o htmx o encaixa no container #questao-atual.
+*@
+<div class="questao-card ativa" data-ordem="@Model.Ordem" data-questao-id="@Model.QuestaoId">
+    <div class="mb-3">
+        <span class="badge bg-light text-dark border">QUESTÃO @Model.Ordem° DE @totalQuestoes</span>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.TextoBase))
+    {
+        <div class="alert alert-info border-info mb-3">
+            <h6 class="fw-bold mb-2">📖 Texto-base</h6>
+            <div style="white-space: pre-wrap;">@Model.TextoBase</div>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.Enunciado))
+    {
+        <div class="questao-card alert alert-light border mb-3">
+            <small class="text-muted">@Model.Enunciado</small>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.ImagemUrl))
+    {
+        <div class="mb-3">
+            <img src="@Model.ImagemUrl"
+                 alt="@(string.IsNullOrWhiteSpace(Model.DescricaoAcessibilidade) ? $"Imagem da questão {Model.Ordem}" : Model.DescricaoAcessibilidade)"
+                 class="img-fluid rounded shadow-sm w-100"
+                 style="max-height: 600px; object-fit: contain;" />
+        </div>
+    }
+
+    <h6 class="fw-semibold mb-4">@Model.Comando</h6>
+
+    <div class="alternativas" aria-label="Alternativas da questão @Model.Ordem">
+        @foreach (var alt in Model.Alternativas)
+        {
+            <label class="alt-option d-flex align-items-start">
+                <input type="radio"
+                       class="form-check-input mt-1 me-3 alt-radio"
+                       name="questao_@Model.QuestaoId"
+                       value="@alt.Letra"
+                       data-questao-id="@Model.QuestaoId"
+                       data-ordem="@Model.Ordem"
+                       @(Model.RespostaMarcada == alt.Letra ? "checked" : "") />
+                <div class="flex-grow-1 alt-label">
+                    <strong>@alt.Letra)</strong> @alt.Texto
+                </div>
+            </label>
+        }
+    </div>
+
+    <div class="questao-actions d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+        <button type="button" class="btn btn-outline-secondary btn-anterior" @(Model.Ordem == 1 ? "disabled" : "")>
+            ← Anterior
+        </button>
+
+        <button type="button" class="btn btn-light btn-limpar" data-questao-id="@Model.QuestaoId" @(Model.RespostaMarcada.HasValue ? "" : "disabled")>
+            Limpar resposta
+        </button>
+
+        @if (Model.Ordem < totalQuestoes)
+        {
+            <button type="button" class="btn btn-primary btn-proxima">
+                Próxima →
+            </button>
+        }
+        else
+        {
+            <button type="button" class="btn btn-success btn-finalizar" id="btnFinalizar">
+                ✓ Finalizar Prova
+            </button>
+        }
+    </div>
+</div>

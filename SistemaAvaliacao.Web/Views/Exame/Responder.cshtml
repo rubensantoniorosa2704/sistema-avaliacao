@@ -30,12 +30,12 @@
         </div>
         <div class="mobile-question-strip mt-3" aria-label="Navegação rápida das questões">
             <div class="mobile-question-dots">
-                @foreach (var q in Model.Questoes)
+                @foreach (var q in Model.Navegacao)
                 {
                     <button type="button"
-                            class="btn-ir-questao status-dot @(q.RespostaMarcada.HasValue ? "status-dot-responded" : "status-dot-pending") @(q.Ordem == 1 ? "status-dot-current" : "")"
+                            class="btn-ir-questao status-dot @(q.Respondida ? "status-dot-responded" : "status-dot-pending") @(q.Ordem == 1 ? "status-dot-current" : "")"
                             data-ordem="@q.Ordem"
-                            data-respondida="@(q.RespostaMarcada.HasValue ? "true" : "false")"
+                            data-respondida="@(q.Respondida ? "true" : "false")"
                             aria-label="Ir para questão @q.Ordem">
                         @q.Ordem
                     </button>
@@ -68,10 +68,10 @@
         <aside class="exame-sidebar" aria-label="Navegação das questões">
             <div class="small text-muted text-uppercase fw-semibold mb-2">Questões</div>
             <div class="questao-nav-list">
-                @foreach (var q in Model.Questoes)
+                @foreach (var q in Model.Navegacao)
                 {
                     <button type="button"
-                            class="questao-nav-btn @(q.Ordem == 1 ? "atual" : "") @(q.RespostaMarcada.HasValue ? "respondida" : "")"
+                            class="questao-nav-btn @(q.Ordem == 1 ? "atual" : "") @(q.Respondida ? "respondida" : "")"
                             data-ordem="@q.Ordem"
                             data-questao-id="@q.QuestaoId"
                             aria-label="Ir para a questão @q.Ordem"
@@ -83,90 +83,23 @@
         </aside>
 
         <div class="exame-question-area">
-            @* Questões (uma de cada vez) *@
-    @{
-        string? textoBaseAnterior = null;
-    }
-            @foreach (var q in Model.Questoes)
-            {
-        <div class="questao-card @(q.Ordem == 1 ? "ativa" : "")" data-ordem="@q.Ordem" data-questao-id="@q.QuestaoId">
-            <div class="mb-3">
-                <span class="badge bg-light text-dark border">QUESTÃO @q.Ordem° DE @Model.TotalQuestoes</span>
-            </div>
-
-            @* Mostrar texto-base apenas na primeira ocorrência *@
-            @if (!string.IsNullOrEmpty(q.TextoBase) && q.TextoBase != textoBaseAnterior)
-            {
-                <div class="alert alert-info border-info mb-3">
-                    <h6 class="fw-bold mb-2">📖 Texto-base</h6>
-                    <div style="white-space: pre-wrap;">@q.TextoBase</div>
-                </div>
-                textoBaseAnterior = q.TextoBase;
-            }
-
-            @* Enunciado da questão *@
-            @if (!string.IsNullOrEmpty(q.Enunciado))
-            {
-                <div class="alert alert-light border mb-3">
-                    <small class="text-muted">@q.Enunciado</small>
-                </div>
-            }
-
-            @* Imagem da questão *@
-            @if (!string.IsNullOrEmpty(q.ImagemUrl))
-            {
-                <div class="mb-3">
-                    <img src="@q.ImagemUrl" 
-                        alt="@(string.IsNullOrWhiteSpace(q.DescricaoAcessibilidade) ? $"Imagem da questão {q.Ordem}" : q.DescricaoAcessibilidade)" 
-                         class="img-fluid rounded shadow-sm w-100" 
-                         style="max-height: 600px; object-fit: contain;" />
-                </div>
-            }
-
-            <h6 class="fw-semibold mb-4">@q.Comando</h6>
-
-            <div class="alternativas" aria-label="Alternativas da questão @q.Ordem">
-                @foreach (var alt in q.Alternativas)
+            @*
+                Só a primeira questão vem renderizada. As demais são carregadas sob demanda
+                (lazy loading): a navegação dispara um GET que troca o conteúdo deste container.
+                O indicador de carregamento aparece enquanto o htmx busca o fragmento.
+            *@
+            <div id="questao-atual"
+                 data-token="@Model.Token"
+                 data-tentativa="@Model.TokenTentativa">
+                @if (Model.PrimeiraQuestao is not null)
                 {
-                    <label class="alt-option d-flex align-items-start">
-                        <input type="radio" 
-                               class="form-check-input mt-1 me-3 alt-radio" 
-                               name="questao_@q.QuestaoId" 
-                               value="@alt.Letra"
-                               data-questao-id="@q.QuestaoId"
-                               data-ordem="@q.Ordem"
-                               @(q.RespostaMarcada == alt.Letra ? "checked" : "") />
-                        <div class="flex-grow-1 alt-label">
-                            <strong>@alt.Letra)</strong> @alt.Texto
-                        </div>
-                    </label>
+                    <partial name="_Questao" model="Model.PrimeiraQuestao" view-data='new ViewDataDictionary(ViewData) { { "TotalQuestoes", Model.TotalQuestoes } }' />
                 }
             </div>
-
-            <div class="questao-actions d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
-                <button type="button" class="btn btn-outline-secondary btn-anterior" @(q.Ordem == 1 ? "disabled" : "")>
-                    ← Anterior
-                </button>
-
-                <button type="button" class="btn btn-light btn-limpar" data-questao-id="@q.QuestaoId" @(q.RespostaMarcada.HasValue ? "" : "disabled")>
-                    Limpar resposta
-                </button>
-
-                @if (q.Ordem < Model.TotalQuestoes)
-                {
-                    <button type="button" class="btn btn-primary btn-proxima">
-                        Próxima →
-                    </button>
-                }
-                else
-                {
-                    <button type="button" class="btn btn-success btn-finalizar" id="btnFinalizar">
-                        ✓ Finalizar Prova
-                    </button>
-                }
+            <div id="questao-carregando" class="text-center text-muted py-5" hidden>
+                <div class="spinner-border text-primary" role="status"></div>
+                <div class="mt-2 small">Carregando questão...</div>
             </div>
-        </div>
-            }
         </div>
     </div>
 </main>
@@ -180,12 +113,12 @@
     </div>
     <div class="offcanvas-body px-4 pb-4">
         <div class="d-flex flex-wrap align-items-center justify-content-center gap-3">
-            @foreach (var q in Model.Questoes)
+            @foreach (var q in Model.Navegacao)
             {
                 <button type="button"
-                        class="btn-ir-questao status-dot @(q.RespostaMarcada.HasValue ? "status-dot-responded" : q.Ordem == 1 ? "status-dot-current" : "status-dot-pending")"
+                        class="btn-ir-questao status-dot @(q.Respondida ? "status-dot-responded" : q.Ordem == 1 ? "status-dot-current" : "status-dot-pending")"
                         data-ordem="@q.Ordem"
-                        data-respondida="@(q.RespostaMarcada.HasValue ? "true" : "false")"
+                        data-respondida="@(q.Respondida ? "true" : "false")"
                         aria-label="Ir para questão @q.Ordem"
                         data-bs-dismiss="offcanvas">
                     @q.Ordem
@@ -215,15 +148,15 @@
             </div>
             <div class="modal-body">
                 <div class="row g-2">
-                    @foreach (var q in Model.Questoes)
+                    @foreach (var q in Model.Navegacao)
                     {
                         <div class="col-3">
                             <button type="button" 
-                                    class="btn btn-sm w-100 text-start btn-ir-questao @(q.RespostaMarcada.HasValue ? "btn-success" : "btn-outline-secondary")"
+                                    class="btn btn-sm w-100 text-start btn-ir-questao @(q.Respondida ? "btn-success" : "btn-outline-secondary")"
                                     data-ordem="@q.Ordem"
                                     data-bs-dismiss="modal">
-                                <span class="badge @(q.RespostaMarcada.HasValue ? "bg-white text-success" : "bg-secondary")">@q.Ordem</span>
-                                @if (q.RespostaMarcada.HasValue)
+                                <span class="badge @(q.Respondida ? "bg-white text-success" : "bg-secondary")">@q.Ordem</span>
+                                @if (q.Respondida)
                                 {
                                     <span class="ms-1">✓</span>
                                 }
@@ -262,8 +195,8 @@
             }
 
             function mostrarMensagem(texto, tipo) {
-                if (typeof toastr !== 'undefined') {
-                    toastr[type](texto);
+                if (typeof toastr !== 'undefined' && typeof toastr[tipo] === 'function') {
+                    toastr[tipo](texto);
                 } else {
                     mostrarStatus(texto, tipo === 'error' ? 'erro' : '');
                 }
@@ -313,7 +246,8 @@
                 document.body.style.overflow = '';
             }
 
-            $('.questao-card img').on('click', function () {
+            // Delegado: a imagem da questão é recriada a cada navegação (lazy loading).
+            $(document).on('click', '#questao-atual img', function () {
                 abrirImagem(this.src, this.alt);
             });
             $('#fecharImagemLightbox').on('click', fecharImagem);
@@ -415,34 +349,65 @@
                 });
             }
 
-            function irParaQuestao(ordem) {
-                $('.questao-card').removeClass('ativa');
-                $(`.questao-card[data-ordem="${ordem}"]`).addClass('ativa');
-                $('.questao-nav-btn').removeClass('atual');
-                $(`.questao-nav-btn[data-ordem="${ordem}"]`).addClass('atual');
-                $('.questao-nav-btn').attr('aria-current', 'false');
-                $(`.questao-nav-btn[data-ordem="${ordem}"]`).attr('aria-current', 'step');
+            // Cache no cliente dos fragmentos de questão já baixados (ordem -> html),
+            // para não refazer a requisição ao voltar numa questão já vista.
+            const cacheQuestoes = {};
+            let carregandoQuestao = false;
+
+            function atualizarDestaqueNavegacao(ordem) {
+                $('.questao-nav-btn').removeClass('atual').attr('aria-current', 'false');
+                $(`.questao-nav-btn[data-ordem="${ordem}"]`).addClass('atual').attr('aria-current', 'step');
                 atualizarPontoAtual(ordem);
                 atualizarFaixaSuperior(ordem);
+            }
+
+            // Lazy loading: busca o fragmento da questão no servidor (ou no cache local)
+            // e o injeta no container. A primeira questão já veio renderizada no HTML.
+            async function irParaQuestao(ordem) {
+                if (carregandoQuestao || ordem === ordemAtual) return;
+                if (ordem < 1 || ordem > totalQuestoes) return;
+
+                const container = document.getElementById('questao-atual');
+
+                if (cacheQuestoes[ordem]) {
+                    container.innerHTML = cacheQuestoes[ordem];
+                } else {
+                    carregandoQuestao = true;
+                    $('#questao-carregando').prop('hidden', false);
+                    container.setAttribute('hidden', '');
+                    try {
+                        const resp = await fetch(
+                            `/prova/${token}/questao/${ordem}?tentativa=${encodeURIComponent(tentativa)}`,
+                            { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                        if (!resp.ok) throw new Error('status ' + resp.status);
+                        const html = await resp.text();
+                        cacheQuestoes[ordem] = html;
+                        container.innerHTML = html;
+                    } catch (e) {
+                        mostrarMensagem('Não foi possível carregar a questão. Tente novamente.', 'error');
+                        return;
+                    } finally {
+                        carregandoQuestao = false;
+                        $('#questao-carregando').prop('hidden', true);
+                        container.removeAttribute('hidden');
+                    }
+                }
+
                 ordemAtual = ordem;
+                atualizarDestaqueNavegacao(ordem);
                 $('html, body').animate({ scrollTop: 0 }, 300);
             }
 
-            $('.btn-proxima').on('click', function () {
-                if (ordemAtual < totalQuestoes) {
-                    irParaQuestao(ordemAtual + 1);
-                }
+            // Handlers delegados: o conteúdo da questão é recriado a cada navegação,
+            // então os botões internos precisam de delegação a partir do container.
+            $(document).on('click', '.btn-proxima', function () {
+                irParaQuestao(ordemAtual + 1);
             });
-
-            $('.btn-anterior').on('click', function () {
-                if (ordemAtual > 1) {
-                    irParaQuestao(ordemAtual - 1);
-                }
+            $(document).on('click', '.btn-anterior', function () {
+                irParaQuestao(ordemAtual - 1);
             });
-
-            $('.questao-nav-btn, .btn-ir-questao').on('click', function () {
-                const ordem = $(this).data('ordem');
-                irParaQuestao(ordem);
+            $(document).on('click', '.questao-nav-btn, .btn-ir-questao', function () {
+                irParaQuestao(Number($(this).data('ordem')));
             });
 
             atualizarFaixaSuperior(ordemAtual);
@@ -452,9 +417,10 @@
                 new bootstrap.Modal('#modalVisaoGeral').show();
             });
 
-            // Limpar resposta
-            $('.btn-limpar').on('click', function () {
+            // Limpar resposta (delegado — o botão é recriado a cada navegação).
+            $(document).on('click', '.btn-limpar', function () {
                 const questaoId = $(this).data('questao-id');
+                const ordem = Number($(this).data('ordem')) || ordemAtual;
                 const botao = this;
                 if (salvamentosPendentes > 0 || finalizando) return;
                 $(botao).prop('disabled', true);
@@ -473,9 +439,10 @@
                     }
 
                     $(`input[name="questao_${questaoId}"]:checked`).prop('checked', false);
-                    $(`.questao-nav-btn[data-questao-id="${questaoId}"]`).removeClass('respondida');
-                    $(`.status-dot[data-ordem="${$(`.questao-card[data-questao-id="${questaoId}"]`).data('ordem')}"]`)
-                        .data('respondida', false);
+                    // O fragmento em cache ficou desatualizado: invalida para rebuscar ao voltar.
+                    delete cacheQuestoes[ordem];
+                    $(`.questao-nav-btn[data-ordem="${ordem}"]`).removeClass('respondida');
+                    $(`.status-dot[data-ordem="${ordem}"]`).data('respondida', false);
                     atualizarPontoAtual(ordemAtual);
                     atualizarProgresso(resp.totalRespondidas);
                     mostrarStatus('Resposta removida.', 'salvo');
@@ -486,11 +453,11 @@
                 });
             });
 
-            // Salvar resposta
+            // Salvar resposta (delegado — o rádio é recriado a cada navegação).
             $(document).on('change', '.alt-radio', function () {
                 const questaoId = $(this).data('questao-id');
                 const alternativa = $(this).val();
-                const ordem = $(this).data('ordem');
+                const ordem = Number($(this).data('ordem'));
 
                 salvamentosPendentes++;
                 mostrarStatus('Salvando resposta...', '');
@@ -503,6 +470,8 @@
                 .done(function (resp) {
                     salvamentosPendentes = Math.max(0, salvamentosPendentes - 1);
                     if (resp.sucesso) {
+                        // Atualiza o fragmento em cache para refletir a marcação ao voltar.
+                        delete cacheQuestoes[ordem];
                         $(`.questao-nav-btn[data-ordem="${ordem}"]`).addClass('respondida');
                         $(`.status-dot[data-ordem="${ordem}"]`)
                             .data('respondida', true)

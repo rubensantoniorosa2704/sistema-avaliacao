@@ -1,6 +1,13 @@
 **/bin/
 **/obj/
 bootstrap.env
-data/*.db-shm
-data/*.db-wal
 wwwroot/uploads/
+
+# Banco SQLite de desenvolvimento e arquivos auxiliares (não versionar)
+**/*.db
+**/*.db-shm
+**/*.db-wal
+
+# Chaves do DataProtection (sensíveis — nunca versionar)
+**/Data/keys/
+**/data/keys/

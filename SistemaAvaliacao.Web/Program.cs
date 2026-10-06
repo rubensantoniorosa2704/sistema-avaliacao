@@ -22,11 +22,19 @@ Directory.CreateDirectory(diretorioChavesProtecaoDados);
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(diretorioChavesProtecaoDados));
 
-// Configurar Entity Framework com SQLite
+// Configurar Entity Framework com SQLite.
+// AddDbContext (scoped, para controllers) + AddDbContextFactory (para serviços singleton,
+// como o cache de questões, que não podem depender de um DbContext scoped).
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite($"Data Source={caminhoBanco}"));
 
-// Registrar serviços
+// Cache em memória (singleton por natureza) para o conteúdo das questões.
+builder.Services.AddMemoryCache();
+
+// Registrar serviços.
+// QuestoesProvaCache é scoped: o estado compartilhado vive no IMemoryCache (singleton);
+// o serviço em si só lê o DbContext scoped na primeira carga de cada prova.
+builder.Services.AddScoped<QuestoesProvaCache>();
 builder.Services.AddScoped<PasswordService>();
 builder.Services.AddScoped<ImageUploadService>();
 builder.Services.AddScoped<ImportacaoAlunosService>();

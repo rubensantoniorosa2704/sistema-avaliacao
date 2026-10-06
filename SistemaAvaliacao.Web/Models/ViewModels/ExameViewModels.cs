@@ -38,10 +38,26 @@ public class ResponderProvaViewModel
     public string NomeProva { get; set; } = string.Empty;
     public string? Descricao { get; set; }
     public DateTime DataFim { get; set; }
-    public List<QuestaoParaResponderItem> Questoes { get; set; } = new();
 
-    public int TotalQuestoes => Questoes.Count;
-    public int TotalRespondidas => Questoes.Count(q => q.RespostaMarcada.HasValue);
+    /// <summary>
+    /// Itens leves para montar a navegação (um por questão): ordem e se já foi respondida.
+    /// Não contém o conteúdo da questão — este é carregado sob demanda (lazy loading).
+    /// </summary>
+    public List<NavegacaoQuestaoItem> Navegacao { get; set; } = new();
+
+    /// <summary>Conteúdo da primeira questão, já renderizado no carregamento inicial.</summary>
+    public QuestaoParaResponderItem? PrimeiraQuestao { get; set; }
+
+    public int TotalQuestoes => Navegacao.Count;
+    public int TotalRespondidas => Navegacao.Count(q => q.Respondida);
+}
+
+/// <summary>Item leve de navegação: só o necessário para os botões da barra lateral/topo.</summary>
+public class NavegacaoQuestaoItem
+{
+    public Guid QuestaoId { get; set; }
+    public int Ordem { get; set; }
+    public bool Respondida { get; set; }
 }
 
 public class QuestaoParaResponderItem

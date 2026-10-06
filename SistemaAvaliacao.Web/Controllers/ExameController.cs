@@ -17,12 +17,30 @@ public class ExameController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly TentativaExameService _tentativas;
+    private readonly QuestoesProvaCache _questoesCache;
 
-    public ExameController(ApplicationDbContext context, TentativaExameService tentativas)
+    public ExameController(
+        ApplicationDbContext context,
+        TentativaExameService tentativas,
+        QuestoesProvaCache questoesCache)
     {
         _context = context;
         _tentativas = tentativas;
+        _questoesCache = questoesCache;
     }
+
+    private static QuestaoParaResponderItem MapearItem(QuestaoExibicao q, char? respostaMarcada) => new()
+    {
+        QuestaoId = q.QuestaoId,
+        Ordem = q.Ordem,
+        TextoBase = q.TextoBase,
+        Enunciado = q.Enunciado,
+        ImagemUrl = q.ImagemUrl,
+        DescricaoAcessibilidade = q.DescricaoAcessibilidade,
+        Comando = q.Comando,
+        RespostaMarcada = respostaMarcada,
+        Alternativas = q.Alternativas.Select(a => new AlternativaItem { Letra = a.Letra, Texto = a.Texto }).ToList()
+    };
 
     /// <summary>
     /// Tela de identificação (email + CPF) para acessar a prova.
@@ -142,10 +160,9 @@ public class ExameController : Controller
     [HttpGet("prova/{token}/responder")]
     public async Task<IActionResult> Responder(Guid token, Guid tentativa)
     {
+        // Conteúdo das questões vem do cache; aqui só precisamos da prova e das respostas já dadas.
         var prova = await _context.Provas
             .AsNoTracking()
-            .Include(p => p.ProvaQuestoes.OrderBy(pq => pq.Ordem))
-                .ThenInclude(pq => pq.Questao)
             .FirstOrDefaultAsync(p => p.TokenPublico == token);
 
         if (prova == null) return NotFound();
@@ -177,6 +194,20 @@ public class ExameController : Controller
         var respostasPorQuestao = provaAluno.Respostas
             .ToDictionary(r => r.QuestaoId, r => r.AlternativaMarcada);
 
+        // Conteúdo das questões vem do cache (sem tocar o banco por navegação).
+        var questoes = await _questoesCache.ObterAsync(prova.Id);
+
+        var navegacao = questoes
+            .Select(q => new NavegacaoQuestaoItem
+            {
+                QuestaoId = q.QuestaoId,
+                Ordem = q.Ordem,
+                Respondida = respostasPorQuestao.TryGetValue(q.QuestaoId, out var a) && a.HasValue
+            })
+            .ToList();
+
+        var primeira = questoes.FirstOrDefault(q => q.Ordem == 1) ?? questoes.FirstOrDefault();
+
         return View("Responder", new ResponderProvaViewModel
         {
             Token = token,
@@ -186,19 +217,48 @@ public class ExameController : Controller
             NomeProva = prova.Nome,
             Descricao = prova.Descricao,
             DataFim = prova.DataFim,
-            Questoes = prova.ProvaQuestoes
-                .Select(pq => new QuestaoParaResponderItem
-                {
-                    QuestaoId = pq.QuestaoId,
-                    Ordem = pq.Ordem,
-                    Enunciado = pq.Questao.Enunciado,
-                    ImagemUrl = pq.Questao.ImagemUrl,
-                    DescricaoAcessibilidade = pq.Questao.DescricaoAcessibilidade,
-                    Comando = pq.Questao.Comando,
-                    RespostaMarcada = respostasPorQuestao.TryGetValue(pq.QuestaoId, out var alt) ? alt : null,
-                    Alternativas = MontarAlternativas(pq.Questao)
-                }).ToList()
+            Navegacao = navegacao,
+            PrimeiraQuestao = primeira is null
+                ? null
+                : MapearItem(primeira, respostasPorQuestao.TryGetValue(primeira.QuestaoId, out var am) ? am : null)
         });
+    }
+
+    /// <summary>
+    /// Devolve o fragmento HTML de uma questão (lazy loading via htmx).
+    /// GET /prova/{token}/questao/{ordem}?tentativa={tokenTentativa}
+    /// </summary>
+    [HttpGet("prova/{token}/questao/{ordem:int}")]
+    public async Task<IActionResult> Questao(Guid token, int ordem, Guid tentativa)
+    {
+        var prova = await _context.Provas
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.TokenPublico == token);
+        if (prova == null) return NotFound();
+
+        // A tentativa precisa estar válida e em andamento (mesma regra do SalvarResposta).
+        var provaAluno = await _context.ProvaAlunos
+            .AsNoTracking()
+            .FirstOrDefaultAsync(pa =>
+                pa.ProvaId == prova.Id &&
+                pa.TokenTentativa == tentativa &&
+                pa.Status == StatusProvaAluno.EmAndamento);
+        if (provaAluno == null) return NotFound();
+
+        if (DateTime.UtcNow > prova.DataFim) return NotFound();
+
+        var questao = await _questoesCache.ObterPorOrdemAsync(prova.Id, ordem);
+        if (questao is null) return NotFound();
+
+        // Resposta já marcada por este aluno nesta questão (para pré-selecionar o rádio).
+        var marcada = await _context.Respostas
+            .AsNoTracking()
+            .Where(r => r.ProvaId == prova.Id && r.AlunoId == provaAluno.AlunoId && r.QuestaoId == questao.QuestaoId)
+            .Select(r => r.AlternativaMarcada)
+            .FirstOrDefaultAsync();
+
+        ViewData["TotalQuestoes"] = (await _questoesCache.ObterAsync(prova.Id)).Count;
+        return PartialView("_Questao", MapearItem(questao, marcada));
     }
 
     /// <summary>
@@ -344,25 +404,5 @@ public class ExameController : Controller
     /// </summary>
     [HttpGet("prova/obrigado")]
     public IActionResult Obrigado() => View();
-
-    // ─── Helpers ───
-
-    private static List<AlternativaItem> MontarAlternativas(Questao q)
-    {
-        var lista = new List<AlternativaItem>
-        {
-            new() { Letra = 'A', Texto = q.AlternativaA },
-            new() { Letra = 'B', Texto = q.AlternativaB }
-        };
-
-        if (q.NumeroAlternativas >= 3 && !string.IsNullOrEmpty(q.AlternativaC))
-            lista.Add(new() { Letra = 'C', Texto = q.AlternativaC });
-        if (q.NumeroAlternativas >= 4 && !string.IsNullOrEmpty(q.AlternativaD))
-            lista.Add(new() { Letra = 'D', Texto = q.AlternativaD });
-        if (q.NumeroAlternativas >= 5 && !string.IsNullOrEmpty(q.AlternativaE))
-            lista.Add(new() { Letra = 'E', Texto = q.AlternativaE });
-
-        return lista;
-    }
 
 }
