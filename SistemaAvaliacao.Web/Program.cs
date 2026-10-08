@@ -6,18 +6,33 @@ using SistemaAvaliacao.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Carregar variáveis do bootstrap.env
+string bootstrapEnvPath = Path.Combine(builder.Environment.ContentRootPath, "..", "bootstrap.env");
+if (File.Exists(bootstrapEnvPath))
+{
+    foreach (string line in File.ReadAllLines(bootstrapEnvPath))
+    {
+        if (string.IsNullOrWhiteSpace(line) || line.StartsWith('#'))
+            continue;
+
+        string[] parts = line.Split('=', 2);
+        if (parts.Length == 2)
+            Environment.SetEnvironmentVariable(parts[0].Trim(), parts[1].Trim());
+    }
+}
+
 // Caminho-padrão do arquivo SQLite (usado quando a env var não é definida).
-var caminhoBancoPadrao = Path.Combine(builder.Environment.ContentRootPath, "data", "sistema_avaliacao.db");
+string caminhoBancoPadrao = Path.Combine(builder.Environment.ContentRootPath, "data", "sistema_avaliacao.db");
 
 // Resolução centralizada do provedor de banco (ver DatabaseConfiguration).
 // Hoje: SQLite. Futuro: trocar Database:Provider para Postgres.
 var dbProvider = DatabaseConfiguration.ResolverProvider(builder.Configuration[DatabaseConfiguration.ProviderKey]);
-var connectionString = DatabaseConfiguration.MontarConnectionString(dbProvider, caminhoBancoPadrao);
+string connectionString = DatabaseConfiguration.MontarConnectionString(dbProvider, caminhoBancoPadrao);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-var diretorioChavesProtecaoDados = Environment.GetEnvironmentVariable("DATA_PROTECTION_KEYS_PATH")
+string diretorioChavesProtecaoDados = Environment.GetEnvironmentVariable("DATA_PROTECTION_KEYS_PATH")
     ?? Path.Combine(builder.Environment.ContentRootPath, "data", "keys");
 Directory.CreateDirectory(diretorioChavesProtecaoDados);
 builder.Services.AddDataProtection()
