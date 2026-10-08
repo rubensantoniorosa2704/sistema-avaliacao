@@ -77,6 +77,7 @@
                 Id: provaId,
                 Nome: nome,
                 Descricao: $('#editDescricao').val(),
+                Instituicao: $('#editInstituicao').val(),
                 NumeroAlternativas: $('#editAlternativas').val(),
                 DataInicio: $('#editDataInicio').val(),
                 DataFim: $('#editDataFim').val(),
@@ -98,6 +99,14 @@
                 const data = await r.json();
                 $('#tituloProva').text(data.nome);
                 $('#descricaoProva').text(data.descricao ?? '');
+                // Atualiza a instituição exibida na linha de metadados (reconstrói o trecho).
+                var inst = (data.instituicao ?? '').trim();
+                if (inst) {
+                    $('#metaInstituicao').html('<span class="mx-2">·</span><i class="fas fa-building me-1"></i><span id="textoInstituicao"></span>');
+                    $('#textoInstituicao').text(inst);
+                } else {
+                    $('#metaInstituicao').empty();
+                }
                 document.title = data.nome;
                 bootstrap.Modal.getInstance('#modalEditarProva').hide();
                 toastr.success('Prova atualizada!');

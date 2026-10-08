@@ -68,6 +68,10 @@
                                    class="fw-semibold text-decoration-none text-dark d-block">
                                     @prova.Nome
                                 </a>
+                                @if (!string.IsNullOrWhiteSpace(prova.Instituicao))
+                                {
+                                    <small class="text-muted d-block"><i class="fas fa-building me-1"></i>@prova.Instituicao</small>
+                                }
                                 <small class="text-muted">
                                     @prova.DataInicio.ParaFusoLocal().ToString("dd/MM/yyyy HH:mm") — 
                                     @prova.DataFim.ParaFusoLocal().ToString("dd/MM/yyyy HH:mm")

@@ -10,6 +10,7 @@ public class ProvaListItem
 {
     public Guid Id { get; set; }
     public string Nome { get; set; } = string.Empty;
+    public string? Instituicao { get; set; }
     public DateTime DataInicio { get; set; }
     public DateTime DataFim { get; set; }
     public int NumeroQuestoes { get; set; }

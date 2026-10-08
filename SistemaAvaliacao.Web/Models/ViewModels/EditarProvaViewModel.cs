@@ -16,6 +16,10 @@ public class EditarProvaViewModel
     [DataType(DataType.MultilineText)]
     public string? Descricao { get; set; }
 
+    [StringLength(200, ErrorMessage = "Instituição deve ter no máximo 200 caracteres")]
+    [Display(Name = "Instituição")]
+    public string? Instituicao { get; set; }
+
     [Range(4, 5, ErrorMessage = "A prova deve ter 4 ou 5 alternativas.")]
     [Display(Name = "Alternativas por questão")]
     public int NumeroAlternativas { get; set; } = 4;

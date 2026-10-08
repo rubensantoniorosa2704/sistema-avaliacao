@@ -24,6 +24,11 @@
                     <textarea class="form-control" id="editDescricao" rows="2" maxlength="1000">@Model.Descricao</textarea>
                 </div>
                 <div class="mb-3">
+                    <label class="form-label">Instituição</label>
+                    <input type="text" class="form-control" id="editInstituicao" maxlength="200" value="@Model.Instituicao" />
+                    <div class="form-text">Uso interno. Não aparece para o aluno.</div>
+                </div>
+                <div class="mb-3">
                     <label class="form-label">Alternativas por questão</label>
                     <select class="form-select" id="editAlternativas">
                         <option value="4" selected="@(Model.NumeroAlternativas == 4)">4 alternativas (A–D)</option>

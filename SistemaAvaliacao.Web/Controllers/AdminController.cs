@@ -97,7 +97,8 @@ public class AdminController : Controller
         {
             query = query.Where(p =>
                 p.Nome.Contains(buscaNome) ||
-                (p.Descricao != null && p.Descricao.Contains(buscaNome)));
+                (p.Descricao != null && p.Descricao.Contains(buscaNome)) ||
+                (p.Instituicao != null && p.Instituicao.Contains(buscaNome)));
         }
 
         var provas = await query
@@ -106,6 +107,7 @@ public class AdminController : Controller
             {
                 Id = p.Id,
                 Nome = p.Nome,
+                Instituicao = p.Instituicao,
                 DataInicio = p.DataInicio,
                 DataFim = p.DataFim,
                 NumeroQuestoes = p.ProvaQuestoes.Count,
@@ -139,6 +141,7 @@ public class AdminController : Controller
         {
             Nome = model.Nome,
             Descricao = model.Descricao,
+            Instituicao = model.Instituicao,
             NumeroAlternativas = model.NumeroAlternativas,
             TipoAplicacao = model.TipoAplicacao,
             // Datas informadas no fuso da aplicação → armazenadas em UTC.
@@ -168,7 +171,7 @@ public class AdminController : Controller
             EdicaoProvaResultado.DataInvalida => BadRequest(new[] { erro! }),
             EdicaoProvaResultado.NaoEncontrada => NotFound(),
             EdicaoProvaResultado.Bloqueada => BadRequest(new[] { erro! }),
-            _ => Ok(new { nome = prova!.Nome, descricao = prova.Descricao })
+            _ => Ok(new { nome = prova!.Nome, descricao = prova.Descricao, instituicao = prova.Instituicao })
         };
     }
 
@@ -196,6 +199,7 @@ public class AdminController : Controller
 
         prova.Nome = model.Nome;
         prova.Descricao = model.Descricao;
+        prova.Instituicao = model.Instituicao;
         prova.NumeroAlternativas = model.NumeroAlternativas;
         prova.DataInicio = DataHora.ParaUtc(model.DataInicio);
         prova.DataFim = DataHora.ParaUtc(model.DataFim);
@@ -229,6 +233,7 @@ public class AdminController : Controller
             Id = prova.Id,
             Nome = prova.Nome,
             Descricao = prova.Descricao,
+            Instituicao = prova.Instituicao,
             DataInicio = prova.DataInicio,
             DataFim = prova.DataFim,
             CreatedAt = prova.CreatedAt,

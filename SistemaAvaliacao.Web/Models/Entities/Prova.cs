@@ -19,6 +19,11 @@ public class Prova
     [StringLength(1000)]
     public string? Descricao { get; set; }
 
+    /// <summary>Instituição à qual a prova foi aplicada (metadado administrativo, opcional).
+    /// Não é exibido ao aluno. Reservado para evoluir para entidade própria no futuro.</summary>
+    [StringLength(200)]
+    public string? Instituicao { get; set; }
+
     /// <summary>Quantidade fixa de alternativas usada na folha de respostas.</summary>
     [Range(4, 5)]
     public int NumeroAlternativas { get; set; } = 4;
