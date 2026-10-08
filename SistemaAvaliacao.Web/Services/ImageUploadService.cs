@@ -45,6 +45,13 @@ public class ImageUploadService
                 return (false, null, "O arquivo não é uma imagem válida.");
             }
 
+            // Validar o CONTEÚDO real do arquivo (magic bytes), não só a extensão/MIME
+            // declarados pelo cliente — ambos podem ser forjados.
+            if (!await AssinaturaConfereComImagemAsync(file))
+            {
+                return (false, null, "O conteúdo do arquivo não corresponde a uma imagem válida.");
+            }
+
             // Criar diretório de uploads se não existir
             var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "questoes");
             if (!Directory.Exists(uploadsFolder))
@@ -74,6 +81,42 @@ public class ImageUploadService
             _logger.LogError(ex, "Erro ao fazer upload de imagem");
             return (false, null, "Erro ao salvar a imagem. Tente novamente.");
         }
+    }
+
+    /// <summary>
+    /// Confere os primeiros bytes do arquivo contra as assinaturas conhecidas dos
+    /// formatos de imagem suportados (JPEG, PNG, GIF, WEBP). Impede que um arquivo
+    /// com extensão/MIME de imagem, mas conteúdo arbitrário, seja aceito.
+    /// </summary>
+    private static async Task<bool> AssinaturaConfereComImagemAsync(IFormFile file)
+    {
+        var buffer = new byte[12];
+        int lidos;
+        await using (var stream = file.OpenReadStream())
+        {
+            lidos = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length));
+        }
+        if (lidos < 12) return false;
+
+        // JPEG: FF D8 FF
+        if (buffer[0] == 0xFF && buffer[1] == 0xD8 && buffer[2] == 0xFF)
+            return true;
+
+        // PNG: 89 50 4E 47 0D 0A 1A 0A
+        if (buffer[0] == 0x89 && buffer[1] == 0x50 && buffer[2] == 0x4E && buffer[3] == 0x47 &&
+            buffer[4] == 0x0D && buffer[5] == 0x0A && buffer[6] == 0x1A && buffer[7] == 0x0A)
+            return true;
+
+        // GIF: "GIF87a" ou "GIF89a"
+        if (buffer[0] == (byte)'G' && buffer[1] == (byte)'I' && buffer[2] == (byte)'F')
+            return true;
+
+        // WEBP: "RIFF" .... "WEBP"
+        if (buffer[0] == (byte)'R' && buffer[1] == (byte)'I' && buffer[2] == (byte)'F' && buffer[3] == (byte)'F' &&
+            buffer[8] == (byte)'W' && buffer[9] == (byte)'E' && buffer[10] == (byte)'B' && buffer[11] == (byte)'P')
+            return true;
+
+        return false;
     }
 
     /// <summary>

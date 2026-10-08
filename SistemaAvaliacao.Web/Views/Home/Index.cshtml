@@ -1,11 +1,4 @@
 ﻿@{
-    if (User.Identity?.IsAuthenticated == true && User.IsInRole("Admin"))
-    {
-        // Redirecionar pra Admin/Provas via JS (no servidor Response.Redirect seria melhor, mas aqui é view)
-        <script>
-            window.location.href = '@Url.Action("Provas", "Admin")';
-        </script>
-    }
     ViewData["Title"] = "Home";
 }
 

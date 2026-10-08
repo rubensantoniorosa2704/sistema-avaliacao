@@ -154,9 +154,9 @@ public class ImportacaoAlunosService
     }
 
     /// <summary>
-    /// Identifica o separador sem se confundir com vÃ­rgulas presentes em campos entre aspas.
-    /// O modelo oficial usa ponto e vÃ­rgula, mas arquivos CSV exportados pelo Excel podem usar
-    /// vÃ­rgula dependendo da configuraÃ§Ã£o regional.
+    /// Identifica o separador sem se confundir com vírgulas presentes em campos entre aspas.
+    /// O modelo oficial usa ponto e vírgula, mas arquivos CSV exportados pelo Excel podem usar
+    /// vírgula dependendo da configuração regional.
     /// </summary>
     private static char DetectarSeparador(string linha)
     {
@@ -185,7 +185,7 @@ public class ImportacaoAlunosService
         return pontoEVirgula >= virgulas ? ';' : ',';
     }
 
-    /// <summary>Parser CSV pequeno, compatÃ­vel com aspas duplas e aspas escapadas (\"\").</summary>
+    /// <summary>Parser CSV pequeno, compatível com aspas duplas e aspas escapadas ("").</summary>
     private static List<string> LerCamposCsv(string linha, char separador)
     {
         var campos = new List<string>();

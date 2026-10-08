@@ -7,16 +7,20 @@ namespace SistemaAvaliacao.Web.Data;
 
 public static class DbInitializer
 {
-    public static void Initialize(ApplicationDbContext context, PasswordService passwordService, ILogger? logger = null)
+    public static void Initialize(ApplicationDbContext context, PasswordService passwordService, DatabaseProvider provider, ILogger? logger = null)
     {
         context.Database.Migrate();
 
-        // Otimizações de concorrência para SQLite em produção.
-        // WAL permite leituras simultâneas durante escritas.
-        // busy_timeout evita "database is locked" em picos de acesso.
-        context.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
-        context.Database.ExecuteSqlRaw("PRAGMA synchronous=NORMAL;");
-        context.Database.ExecuteSqlRaw("PRAGMA busy_timeout=5000;");
+        // Otimizações de concorrência ESPECÍFICAS do SQLite.
+        // WAL permite leituras simultâneas durante escritas; busy_timeout evita
+        // "database is locked" em picos. No PostgreSQL a concorrência é nativa (MVCC),
+        // então estes PRAGMAs não se aplicam e não devem ser executados.
+        if (provider.EhSqlite())
+        {
+            context.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
+            context.Database.ExecuteSqlRaw("PRAGMA synchronous=NORMAL;");
+            context.Database.ExecuteSqlRaw("PRAGMA busy_timeout=5000;");
+        }
 
         context.Database.ExecuteSqlRaw("UPDATE Provas SET NumeroAlternativas = 4 WHERE NumeroAlternativas NOT IN (4, 5)");
 

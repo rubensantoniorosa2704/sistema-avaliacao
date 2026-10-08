@@ -106,9 +106,9 @@ public class ExportacaoResultadosService
     }
 
     /// <summary>
-    /// Gera o arquivo operacional para devolutiva da instituiÃ§Ã£o. Diferente da
-    /// matriz psicomÃ©trica, ele preserva os identificadores do aluno e explicita
-    /// o resultado de cada questÃ£o como ACERTO, ERRO ou SEM_RESPOSTA.
+    /// Gera o arquivo operacional para devolutiva da instituição. Diferente da
+    /// matriz psicométrica, ele preserva os identificadores do aluno e explicita
+    /// o resultado de cada questão como ACERTO, ERRO ou SEM_RESPOSTA.
     /// </summary>
     public async Task<MatrizExportada?> GerarResultadosDetalhadosCsvAsync(Guid provaId)
     {
@@ -182,8 +182,8 @@ public class ExportacaoResultadosService
     /// <summary>Aspas duplas quando o valor contém separador, aspas ou quebra de linha.</summary>
     private static string EscaparCsv(string valor)
     {
-        // Evita que dados informados pela instituiÃ§Ã£o sejam interpretados como
-        // fÃ³rmulas ao abrir o CSV no Excel.
+        // Evita que dados informados pela instituição sejam interpretados como
+        // fórmulas ao abrir o CSV no Excel.
         if (!string.IsNullOrEmpty(valor) && "=+-@".Contains(valor[0]))
             valor = "'" + valor;
         if (valor.Contains(';') || valor.Contains('"') || valor.Contains('\n') || valor.Contains('\r'))

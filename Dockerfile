@@ -23,7 +23,6 @@ WORKDIR /app
 
 COPY --from=build /out/web ./web
 COPY --from=build /out/worker ./worker
-COPY data/sistema_avaliacao.db /seed/sistema_avaliacao.db
 COPY deploy/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY deploy/entrypoint.sh /entrypoint.sh
 

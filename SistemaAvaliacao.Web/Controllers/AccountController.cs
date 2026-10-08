@@ -46,9 +46,11 @@ public class AccountController : Controller
             return View(model);
         }
 
+        var emailNormalizado = model.Email?.Trim().ToLowerInvariant() ?? string.Empty;
+
         // Buscar usuário por email
         var usuario = await _context.Usuarios
-            .FirstOrDefaultAsync(u => u.Email == model.Email);
+            .FirstOrDefaultAsync(u => u.Email == emailNormalizado);
 
         if (usuario == null)
         {

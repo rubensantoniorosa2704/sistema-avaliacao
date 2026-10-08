@@ -72,3 +72,10 @@ public class QuestaoParaResponderItem
     public char? RespostaMarcada { get; set; }
     public List<AlternativaItem> Alternativas { get; set; } = new();
 }
+
+/// <summary>Uma alternativa como é exibida ao aluno (letra + texto), sem gabarito.</summary>
+public class AlternativaItem
+{
+    public char Letra { get; set; }
+    public string Texto { get; set; } = string.Empty;
+}

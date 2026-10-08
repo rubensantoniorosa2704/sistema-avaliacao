@@ -6,12 +6,13 @@ using SistemaAvaliacao.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var caminhoBanco = Environment.GetEnvironmentVariable("SISTEMA_AVALIACAO_DB")
-    ?? Path.Combine(builder.Environment.ContentRootPath, "data", "sistema_avaliacao.db");
+// Caminho-padrão do arquivo SQLite (usado quando a env var não é definida).
+var caminhoBancoPadrao = Path.Combine(builder.Environment.ContentRootPath, "data", "sistema_avaliacao.db");
 
-var diretorioBanco = Path.GetDirectoryName(caminhoBanco);
-if (!string.IsNullOrWhiteSpace(diretorioBanco))
-    Directory.CreateDirectory(diretorioBanco);
+// Resolução centralizada do provedor de banco (ver DatabaseConfiguration).
+// Hoje: SQLite. Futuro: trocar Database:Provider para Postgres.
+var dbProvider = DatabaseConfiguration.ResolverProvider(builder.Configuration[DatabaseConfiguration.ProviderKey]);
+var connectionString = DatabaseConfiguration.MontarConnectionString(dbProvider, caminhoBancoPadrao);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
@@ -22,11 +23,11 @@ Directory.CreateDirectory(diretorioChavesProtecaoDados);
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(diretorioChavesProtecaoDados));
 
-// Configurar Entity Framework com SQLite.
+// Configurar Entity Framework (provedor resolvido em DatabaseConfiguration).
 // AddDbContext (scoped, para controllers) + AddDbContextFactory (para serviços singleton,
 // como o cache de questões, que não podem depender de um DbContext scoped).
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite($"Data Source={caminhoBanco}"));
+    DatabaseConfiguration.Configure(options, dbProvider, connectionString));
 
 // Cache em memória (singleton por natureza) para o conteúdo das questões.
 builder.Services.AddMemoryCache();
@@ -96,7 +97,7 @@ using (var scope = app.Services.CreateScope())
         var context = services.GetRequiredService<ApplicationDbContext>();
         var passwordService = services.GetRequiredService<PasswordService>();
         var initLogger = services.GetRequiredService<ILogger<Program>>();
-        DbInitializer.Initialize(context, passwordService, initLogger);
+        DbInitializer.Initialize(context, passwordService, dbProvider, initLogger);
     }
     catch (Exception ex)
     {

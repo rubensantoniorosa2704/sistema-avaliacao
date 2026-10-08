@@ -22,14 +22,3 @@ public class EnviarCorrecaoViewModel
     [Required(ErrorMessage = "Selecione um arquivo PDF")]
     public IFormFile? ArquivoPdf { get; set; }
 }
-
-public class CorrecaoLoteItem
-{
-    public Guid Id { get; set; }
-    public string NomeArquivo { get; set; } = string.Empty;
-    public StatusProcessamentoCorrecao Status { get; set; }
-    public int TotalFolhas { get; set; }
-    public int FolhasProcessadas { get; set; }
-    public Guid ProvaId { get; set; }
-    public DateTime CriadoEm { get; set; }
-}

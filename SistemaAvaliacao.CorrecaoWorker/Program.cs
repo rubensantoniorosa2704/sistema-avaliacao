@@ -13,17 +13,23 @@ public class Startup
         var builder = Host.CreateApplicationBuilder(args);
         builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
 
-        var databasePath = Environment.GetEnvironmentVariable("SISTEMA_AVALIACAO_DB")
-            ?? Path.GetFullPath(Path.Combine(
-                AppContext.BaseDirectory,
-                "..", "..", "..", "..",
-                "SistemaAvaliacao.Web",
-                "sistema_avaliacao.db"));
+        // Caminho-padrão do arquivo SQLite para o worker (quando a env var não é definida):
+        // o mesmo arquivo usado pela aplicação Web.
+        var caminhoBancoPadrao = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..",
+            "SistemaAvaliacao.Web",
+            "sistema_avaliacao.db"));
 
-        Console.WriteLine($"Banco do worker: {databasePath}");
+        // Resolução centralizada do provedor de banco — idêntica à da aplicação Web.
+        var dbProvider = DatabaseConfiguration.ResolverProvider(
+            builder.Configuration[DatabaseConfiguration.ProviderKey]);
+        var connectionString = DatabaseConfiguration.MontarConnectionString(dbProvider, caminhoBancoPadrao);
+
+        Console.WriteLine($"Worker: provedor={dbProvider}");
 
         builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
-            options.UseSqlite($"Data Source={databasePath}"));
+            DatabaseConfiguration.Configure(options, dbProvider, connectionString));
         builder.Services.AddHostedService<OmrBackgroundWorker>();
 
         var host = builder.Build();

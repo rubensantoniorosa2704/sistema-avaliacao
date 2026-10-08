@@ -52,7 +52,12 @@ public class AdminController : Controller
     // ───────────────────────────── Helpers ────────────────────────────────
 
     private Guid GetCurrentUserId()
-        => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    {
+        var valor = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(valor) || !Guid.TryParse(valor, out var id))
+            throw new InvalidOperationException("Usuário autenticado sem identificador válido.");
+        return id;
+    }
 
     /// <summary>Prova travada para edição: algum aluno já iniciou.</summary>
     private static bool EstaBloqueada(Prova prova)
@@ -151,87 +156,43 @@ public class AdminController : Controller
         return RedirectToAction(nameof(QuestoesProva), new { id = prova.Id });
     }
 
-    [HttpGet]
-    public async Task<IActionResult> EditarProva(Guid id)
-    {
-        var prova = await _context.Provas
-            .Include(p => p.ProvaQuestoes)
-            .Include(p => p.ProvaAlunos)
-            .FirstOrDefaultAsync(p => p.Id == id);
-
-        if (prova == null) return NotFound();
-
-        if (EstaBloqueada(prova))
-        {
-            TempData["Erro"] = "A prova já foi iniciada por um aluno e não pode mais ser editada.";
-            return RedirectToAction(nameof(DetalhesProva), new { id });
-        }
-
-        return View(new EditarProvaViewModel
-        {
-            Id = prova.Id,
-            Nome = prova.Nome,
-            Descricao = prova.Descricao,
-            NumeroAlternativas = prova.NumeroAlternativas,
-            // Armazenadas em UTC → exibidas no formulário no fuso da aplicação.
-            DataInicio = DataHora.ParaLocal(prova.DataInicio),
-            DataFim = DataHora.ParaLocal(prova.DataFim),
-            NumeroQuestoes = prova.ProvaQuestoes.Count,
-            NumeroAlunosAtribuidos = prova.ProvaAlunos.Count
-        });
-    }
-
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> EditarProvaModal(EditarProvaViewModel model)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
 
-        if (model.DataFim <= model.DataInicio)
-            return BadRequest(new[] { "Data de fim deve ser posterior à data de início." });
-
-        var prova = await _context.Provas
-            .Include(p => p.ProvaAlunos)
-            .FirstOrDefaultAsync(p => p.Id == model.Id);
-
-        if (prova == null) return NotFound();
-
-        if (EstaBloqueada(prova))
-            return BadRequest(new[] { "A prova já foi iniciada e não pode mais ser editada." });
-
-        prova.Nome = model.Nome;
-        prova.Descricao = model.Descricao;
-        prova.NumeroAlternativas = model.NumeroAlternativas;
-        prova.DataInicio = DataHora.ParaUtc(model.DataInicio);
-        prova.DataFim = DataHora.ParaUtc(model.DataFim);
-        prova.UpdatedAt = DateTime.UtcNow;
-
-        await _context.SaveChangesAsync();
-
-        return Ok(new { nome = prova.Nome, descricao = prova.Descricao });
+        var (resultado, prova, erro) = await AplicarEdicaoProvaAsync(model);
+        return resultado switch
+        {
+            EdicaoProvaResultado.DataInvalida => BadRequest(new[] { erro! }),
+            EdicaoProvaResultado.NaoEncontrada => NotFound(),
+            EdicaoProvaResultado.Bloqueada => BadRequest(new[] { erro! }),
+            _ => Ok(new { nome = prova!.Nome, descricao = prova.Descricao })
+        };
     }
 
-    [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> EditarProva(EditarProvaViewModel model)
-    {
-        if (!ModelState.IsValid) return View(model);
+    private enum EdicaoProvaResultado { Ok, DataInvalida, NaoEncontrada, Bloqueada }
 
+    /// <summary>
+    /// Validação e aplicação comuns da edição de prova, compartilhadas entre a edição
+    /// via página (EditarProva) e via modal (EditarProvaModal). Não persiste se houver erro.
+    /// </summary>
+    private async Task<(EdicaoProvaResultado Resultado, Prova? Prova, string? Erro)> AplicarEdicaoProvaAsync(
+        EditarProvaViewModel model)
+    {
         if (model.DataFim <= model.DataInicio)
-        {
-            ModelState.AddModelError("DataFim", "Data de fim deve ser posterior à data de início.");
-            return View(model);
-        }
+            return (EdicaoProvaResultado.DataInvalida, null, "Data de fim deve ser posterior à data de início.");
 
         var prova = await _context.Provas
             .Include(p => p.ProvaAlunos)
             .FirstOrDefaultAsync(p => p.Id == model.Id);
-        if (prova == null) return NotFound();
+
+        if (prova == null)
+            return (EdicaoProvaResultado.NaoEncontrada, null, null);
 
         if (EstaBloqueada(prova))
-        {
-            TempData["Erro"] = "A prova já foi iniciada por um aluno e não pode mais ser editada.";
-            return RedirectToAction(nameof(DetalhesProva), new { id = prova.Id });
-        }
+            return (EdicaoProvaResultado.Bloqueada, prova, "A prova já foi iniciada e não pode mais ser editada.");
 
         prova.Nome = model.Nome;
         prova.Descricao = model.Descricao;
@@ -241,9 +202,7 @@ public class AdminController : Controller
         prova.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
-
-        TempData["Sucesso"] = "Prova atualizada com sucesso!";
-        return RedirectToAction(nameof(DetalhesProva), new { id = prova.Id });
+        return (EdicaoProvaResultado.Ok, prova, null);
     }
 
     [HttpGet]
@@ -660,7 +619,7 @@ public class AdminController : Controller
 
         if (arquivoCsv.Length > 5 * 1024 * 1024)
         {
-            TempData["Erro"] = "O arquivo CSV deve ter no mÃ¡ximo 5 MB.";
+            TempData["Erro"] = "O arquivo CSV deve ter no máximo 5 MB.";
             return RedirectToAction(nameof(DetalhesProva), new { id = provaId });
         }
 
@@ -837,8 +796,8 @@ public class AdminController : Controller
     }
 
     /// <summary>
-    /// Exporta o resultado legÃ­vel pela instituiÃ§Ã£o: uma linha por aluno,
-    /// identificadores e ACERTO/ERRO/SEM_RESPOSTA para cada questÃ£o.
+    /// Exporta o resultado legível pela instituição: uma linha por aluno,
+    /// identificadores e ACERTO/ERRO/SEM_RESPOSTA para cada questão.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> ExportarResultadosCsv(Guid id)
@@ -850,14 +809,14 @@ public class AdminController : Controller
         if (prova == null) return NotFound();
         if (!PodeExportar(prova))
         {
-            TempData["Erro"] = "A exportaÃ§Ã£o libera quando todos os alunos finalizarem ou quando o prazo da prova terminar.";
+            TempData["Erro"] = "A exportação libera quando todos os alunos finalizarem ou quando o prazo da prova terminar.";
             return RedirectToAction(nameof(DetalhesProva), new { id });
         }
 
         var resultado = await _exportacaoResultados.GerarResultadosDetalhadosCsvAsync(id);
         if (resultado == null)
         {
-            TempData["Erro"] = "NÃ£o hÃ¡ dados para exportar.";
+            TempData["Erro"] = "Não há dados para exportar.";
             return RedirectToAction(nameof(DetalhesProva), new { id });
         }
 
