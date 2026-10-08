@@ -34,10 +34,11 @@
                             <span asp-validation-for="CPF" class="text-danger small"></span>
                         </div>
 
-                        @if (ViewData.ModelState[""]?.Errors.Count > 0)
+                        @{ var errosGerais = ViewData.ModelState[""]; }
+                        @if (errosGerais is { Errors.Count: > 0 })
                         {
                             <div class="alert alert-danger small mb-3">
-                                @foreach (var erro in ViewData.ModelState[""].Errors)
+                                @foreach (var erro in errosGerais.Errors)
                                 {
                                     <div>@erro.ErrorMessage</div>
                                 }

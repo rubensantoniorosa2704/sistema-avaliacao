@@ -4,6 +4,11 @@ using SkiaSharp;
 
 namespace SistemaAvaliacao.Web.Services.Omr;
 
+// CA1416: a PDFtoImage (PDFium) anota suas APIs com plataformas específicas.
+// Este projeto só roda em plataformas suportadas (Windows em dev, Linux no deploy),
+// então a verificação de plataforma do analisador não se aplica aqui.
+#pragma warning disable CA1416
+
 /// <summary>
 /// Converte um PDF em imagens OpenCV (uma por página).
 /// Usa PDFtoImage (PDFium + SkiaSharp); o SKBitmap é codificado em PNG na memória
@@ -31,7 +36,9 @@ public static class PdfPageLoader
     {
         using var fs = File.OpenRead(pdfPath);
         var options = new RenderOptions(Dpi: dpi);
-        using var sk = Conversion.ToImage(fs, page: pageNumber1Based - 1, leaveOpen: false, password: null, options: options);
+        // page como System.Index (0-based) — sobrecarga atual da PDFtoImage.
+        Index pagina = pageNumber1Based - 1;
+        using var sk = Conversion.ToImage(fs, page: pagina, leaveOpen: false, password: null, options: options);
         return SkBitmapToMat(sk);
     }
 
@@ -44,3 +51,5 @@ public static class PdfPageLoader
         return Cv2.ImDecode(bytes, ImreadModes.Color);
     }
 }
+
+#pragma warning restore CA1416

@@ -1,0 +1,67 @@
+# EditorConfig — Sistema de Avaliação
+# https://editorconfig.org  |  Convenções de estilo compartilhadas pelo projeto.
+# Mantido deliberadamente enxuto: padroniza o essencial sem transformar
+# estilo em erro de build (a maioria das regras é "suggestion"/"warning").
+
+root = true
+
+# ───────────────────────── Base (todos os arquivos) ─────────────────────────
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+
+# ───────────────────────── C# ─────────────────────────
+[*.cs]
+indent_size = 4
+max_line_length = 120
+
+# Organização de usings
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+dotnet_style_namespace_match_folder = true:suggestion
+
+# Preferências de linguagem (refletem o estilo já usado no código)
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_prefer_braces = when_multiline:suggestion
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_style_prefer_primary_constructors = false:suggestion
+
+# this. é redundante neste projeto
+dotnet_style_qualification_for_field = false:warning
+dotnet_style_qualification_for_property = false:warning
+dotnet_style_qualification_for_method = false:warning
+
+# Nulidade e padrões modernos
+csharp_style_throw_expression = true:suggestion
+dotnet_style_null_propagation = true:suggestion
+dotnet_style_coalesce_expression = true:suggestion
+dotnet_style_prefer_conditional_expression_over_assignment = true:suggestion
+
+# Campos privados: _camelCase (padrão já usado: _context, _logger)
+dotnet_naming_rule.private_fields_underscore.severity = suggestion
+dotnet_naming_rule.private_fields_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_underscore.style = underscore_prefix
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_style.underscore_prefix.required_prefix = _
+dotnet_naming_style.underscore_prefix.capitalization = camel_case
+
+# ───────────────────────── Web / assets ─────────────────────────
+[*.{cshtml,html,css,js,json,yml,yaml}]
+indent_size = 2
+
+# ───────────────────────── Projetos / config ─────────────────────────
+[*.{csproj,props,targets}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+# Scripts de deploy usam LF (rodam em Linux)
+[*.sh]
+end_of_line = lf

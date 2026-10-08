@@ -1,0 +1,99 @@
+@model SistemaAvaliacao.Web.Models.ViewModels.DetalhesProvaViewModel
+
+@* Modal: gestão de alunos da prova. Ver CONVENTIONS.md §6. *@
+<div class="modal fade" id="modalAlunos" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-users me-2 text-secondary"></i>Alunos
+                    @if (Model.NumeroAlunos > 0)
+                    {
+                        <span class="badge bg-secondary ms-1">@Model.NumeroAlunos</span>
+                    }
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+
+                @* Grid de alunos *@
+                @if (Model.Alunos.Any())
+                {
+                    <div class="table-responsive mb-3" style="max-height:320px;overflow-y:auto">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>E-mail</th>
+                                    <th class="text-center">Status</th>
+                                    <th style="width:40px"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var a in Model.Alunos)
+                                {
+                                    var statusBadge = a.Status switch { "Finalizada" => "success", "EmAndamento" => "warning", _ => "secondary" };
+                                    var statusLabel = a.Status switch { "NaoIniciada" => "Pendente", "EmAndamento" => "Em andamento", "Finalizada" => "Finalizada", _ => a.Status };
+                                    var emailParts = a.EmailAluno.Split('@');
+                                    var emailMask = emailParts.Length == 2
+                                        ? (emailParts[0].Length > 2 ? emailParts[0][..2] + "**" : emailParts[0]) + "@" + emailParts[1]
+                                        : a.EmailAluno;
+                                    <tr>
+                                        <td class="fw-medium">@a.NomeAluno</td>
+                                        <td class="text-muted small">@emailMask</td>
+                                        <td class="text-center"><span class="badge bg-@statusBadge">@statusLabel</span></td>
+                                        <td>
+                                            @* Só pode remover quem ainda não iniciou *@
+                                            @if (a.Status == "NaoIniciada")
+                                            {
+                                                <button type="button" class="btn btn-sm btn-light text-danger btn-remover-aluno"
+                                                        data-id="@a.AlunoId" data-nome="@a.NomeAluno" title="Remover">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-3 mb-3">
+                        <i class="fas fa-users fa-2x text-muted mb-2 d-block" style="opacity:.4"></i>
+                        <p class="text-muted mb-0 small">Nenhum aluno importado ainda.</p>
+                    </div>
+                }
+
+                @* Import CSV *@
+                @if (!Model.Bloqueada)
+                {
+                    <hr class="my-3" />
+                    <div class="row g-3 row-cols-2">
+                        <div class="col">
+                            <div class="card border-0 shadow-sm text-center action-block"
+                                 style="cursor:pointer" onclick="document.getElementById('inputCsvAlunos').click()">
+                                <div class="card-body py-4">
+                                    <i class="fas fa-file-csv fa-2x text-primary mb-2 d-block"></i>
+                                    <div class="fw-semibold small">Importar CSV</div>
+                                </div>
+                            </div>
+                            <input type="file" id="inputCsvAlunos" accept=".csv" style="display:none" />
+                        </div>
+                        <div class="col">
+                            <a asp-action="BaixarModeloCsv"
+                               class="card border-0 shadow-sm text-center text-decoration-none action-block h-100">
+                                <div class="card-body py-4">
+                                    <i class="fas fa-download fa-2x text-secondary mb-2 d-block"></i>
+                                    <div class="fw-semibold small">Baixar Modelo</div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                }
+
+            </div>
+        </div>
+    </div>
+</div>

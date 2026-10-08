@@ -310,7 +310,7 @@ public sealed class OmrBackgroundWorker : BackgroundService
 
         return qr.Status switch
         {
-            QuestionStatus.Valida =>
+            QuestionStatus.Valida when qr.DetectedOption.HasValue =>
                 $"OMR: {qr.DetectedOption}={qr.FillRatios[qr.DetectedOption.Value - 'A']:P1} (conf={qr.Confidence:P0})",
             QuestionStatus.EmBranco =>
                 $"OMR: Nenhuma marcação detectada",

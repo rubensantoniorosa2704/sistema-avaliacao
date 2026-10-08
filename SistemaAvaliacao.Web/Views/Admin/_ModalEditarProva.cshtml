@@ -1,0 +1,52 @@
+@model SistemaAvaliacao.Web.Models.ViewModels.DetalhesProvaViewModel
+@{
+    var editInicioLocal = Model.DataInicio.ParaFusoLocal();
+    var editFimLocal = Model.DataFim.ParaFusoLocal();
+}
+
+@* Modal: edição rápida da prova (salva via fetch -> EditarProvaModal). Ver CONVENTIONS.md §6.
+   Os campos já vêm preenchidos pelo servidor; o JS apenas abre o modal e envia. *@
+<div class="modal fade" id="modalEditarProva" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Prova</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="editarErro" class="alert alert-danger d-none small py-2"></div>
+                <div class="mb-3">
+                    <label class="form-label">Nome <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="editNome" maxlength="300" required value="@Model.Nome" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Descrição</label>
+                    <textarea class="form-control" id="editDescricao" rows="2" maxlength="1000">@Model.Descricao</textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Alternativas por questão</label>
+                    <select class="form-select" id="editAlternativas">
+                        <option value="4" selected="@(Model.NumeroAlternativas == 4)">4 alternativas (A–D)</option>
+                        <option value="5" selected="@(Model.NumeroAlternativas == 5)">5 alternativas (A–E)</option>
+                    </select>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Início <span class="text-danger">*</span></label>
+                        <input type="datetime-local" class="form-control" id="editDataInicio" value="@editInicioLocal.ToString("yyyy-MM-ddTHH:mm")" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Fim <span class="text-danger">*</span></label>
+                        <input type="datetime-local" class="form-control" id="editDataFim" value="@editFimLocal.ToString("yyyy-MM-ddTHH:mm")" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnSalvarEdicao">
+                    <i class="fas fa-check me-1"></i>Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

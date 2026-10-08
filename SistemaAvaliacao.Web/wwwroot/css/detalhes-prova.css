@@ -1,0 +1,9 @@
+/* Detalhes da prova (Admin/DetalhesProva). Ver CONVENTIONS.md §7. */
+
+.action-block {
+    transition: box-shadow .15s, transform .15s;
+}
+.action-block:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .12) !important;
+    transform: translateY(-2px);
+}
