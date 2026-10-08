@@ -17,13 +17,13 @@ public sealed class OmrReader
     private readonly SheetLayout _layout;
     private readonly AnswerClassifier _classifier;
     private readonly Dictionary _arucoDict;
-    private readonly ArucoDetector _detector;
+    private readonly DetectorParameters _detectorParameters;
 
     public OmrReader(SheetLayout layout, AnswerClassifier classifier)
     {
         _layout = layout;
         _classifier = classifier;
-        _arucoDict = CvAruco.GetPredefinedDictionary(PredefinedDictionaryType.Dict4X4_50);
+        _arucoDict = CvAruco.GetPredefinedDictionary(PredefinedDictionaryName.Dict4X4_50);
 
         // Parâmetros mais tolerantes: janela adaptativa maior e limites de perímetro
         // amplos ajudam a detectar marcadores mesmo com scan de baixa qualidade/rotação.
@@ -36,7 +36,7 @@ public sealed class OmrReader
             MaxMarkerPerimeterRate = 4.0,
             PolygonalApproxAccuracyRate = 0.05,
         };
-        _detector = new ArucoDetector(_arucoDict, p, new RefineParameters());
+        _detectorParameters = p;
     }
 
     /// <summary>
@@ -98,7 +98,8 @@ public sealed class OmrReader
         using var gray = new Mat();
         Cv2.CvtColor(page, gray, ColorConversionCodes.BGR2GRAY);
 
-        _detector.DetectMarkers(gray, out Point2f[][] corners, out int[] ids, out _);
+        CvAruco.DetectMarkers(gray, _arucoDict, out Point2f[][] corners, out int[] ids,
+            _detectorParameters, out Point2f[][] rejected);
 
         if (ids is null || ids.Length < 4)
         {

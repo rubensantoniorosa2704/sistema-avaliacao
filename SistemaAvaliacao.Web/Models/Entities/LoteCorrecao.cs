@@ -31,5 +31,5 @@ public class LoteCorrecao
     public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
     public DateTime? FinalizadoEm { get; set; }
 
-    public ICollection<FolhaResposta> Folhas { get; set; } = new List<FolhaResposta>();
+    public ICollection<FolhaResposta> Folhas { get; set; } = [];
 }

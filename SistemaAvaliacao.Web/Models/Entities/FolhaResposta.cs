@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using SistemaAvaliacao.Web.Models.Enums;
 
 namespace SistemaAvaliacao.Web.Models.Entities;
 
