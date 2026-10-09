@@ -8,8 +8,8 @@
 
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb small">
-            <li class="breadcrumb-item"><a asp-action="Provas">Provas</a></li>
-            <li class="breadcrumb-item"><a asp-action="DetalhesProva" asp-route-id="@Model.ProvaId">@Model.NomeProva</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Provas" asp-action="Provas">Provas</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Provas" asp-action="DetalhesProva" asp-route-id="@Model.ProvaId">@Model.NomeProva</a></li>
             <li class="breadcrumb-item"><a asp-action="QuestoesProva" asp-route-id="@Model.ProvaId">Questões</a></li>
             <li class="breadcrumb-item active">Revisar importação</li>
         </ol>

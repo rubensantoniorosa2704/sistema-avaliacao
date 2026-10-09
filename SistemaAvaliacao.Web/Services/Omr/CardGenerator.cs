@@ -33,7 +33,7 @@ public sealed class CardGenerator
     public CardGenerator(SheetLayout layout)
     {
         _layout = layout;
-        _arucoDict = CvAruco.GetPredefinedDictionary(PredefinedDictionaryType.Dict4X4_50);
+        _arucoDict = CvAruco.GetPredefinedDictionary(PredefinedDictionaryName.Dict4X4_50);
     }
 
     /// <summary>Formato do payload do QR: "exam=&lt;id&gt;;student=&lt;id&gt;;v=1".</summary>

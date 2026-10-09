@@ -9,7 +9,7 @@ public class HomeController : Controller
     public IActionResult Index()
     {
         if (User.Identity?.IsAuthenticated == true && User.IsInRole("Admin"))
-            return RedirectToAction("Provas", "Admin");
+            return RedirectToAction("Provas", "Provas");
 
         return View();
     }

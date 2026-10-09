@@ -8,8 +8,8 @@
 
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb small">
-            <li class="breadcrumb-item"><a asp-action="Provas">Provas</a></li>
-            <li class="breadcrumb-item"><a asp-action="DetalhesProva" asp-route-id="@Model.ProvaId">@Model.NomeProva</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Provas" asp-action="Provas">Provas</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Provas" asp-action="DetalhesProva" asp-route-id="@Model.ProvaId">@Model.NomeProva</a></li>
             <li class="breadcrumb-item active">Questões</li>
         </ol>
     </nav>
@@ -272,7 +272,7 @@
 @section Scripts {
     @* Dados do servidor para o JS externo (Razor codifica os valores com segurança). *@
     <div id="questoesProvaConfig"
-         data-obter-questao-url="@Url.Action("ObterQuestao", "Admin")"
+         data-obter-questao-url="@Url.Action("ObterQuestao", "Questoes")"
          data-sucesso="@(TempData["Sucesso"])"
          data-erro="@(TempData["Erro"])"
          hidden></div>

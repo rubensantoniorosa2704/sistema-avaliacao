@@ -2,23 +2,30 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using SistemaAvaliacao.Web.Data;
 using SistemaAvaliacao.Web.Models.ViewModels;
 using SistemaAvaliacao.Web.Services;
 
 namespace SistemaAvaliacao.Web.Controllers;
 
+/// <summary>
+/// Autenticação por email/senha. Hoje atende apenas o administrador —
+/// único perfil que faz login por credenciais. Alunos entram por token
+/// temporário (ExameController) e não passam por aqui; o perfil Coordenador
+/// ainda não possui fluxo de login.
+///
+/// Pontos de crescimento previstos:
+/// - Destino pós-login por perfil: ver o redirect no final de Login (POST).
+/// - Multitenant (InstitutionId): a claim correspondente é montada em
+///   LoginService.BuildClaims; a autorização por tenant deve ler de lá.
+/// </summary>
 public class AccountController : Controller
 {
-    private readonly ApplicationDbContext _context;
-    private readonly PasswordService _passwordService;
+    private readonly LoginService _loginService;
 
-    public AccountController(ApplicationDbContext context, PasswordService passwordService)
+    public AccountController(LoginService loginService)
     {
-        _context = context;
-        _passwordService = passwordService;
+        _loginService = loginService;
     }
 
     [HttpGet]
@@ -46,36 +53,15 @@ public class AccountController : Controller
             return View(model);
         }
 
-        var emailNormalizado = model.Email?.Trim().ToLowerInvariant() ?? string.Empty;
+        var result = await _loginService.AuthenticateAsync(model.Email, model.Password);
 
-        // Buscar usuário por email
-        var usuario = await _context.Usuarios
-            .FirstOrDefaultAsync(u => u.Email == emailNormalizado);
-
-        if (usuario == null)
+        if (!result.Succeeded)
         {
             ModelState.AddModelError(string.Empty, "Email ou senha inválidos");
             return View(model);
         }
 
-        // Verificar senha
-        if (!_passwordService.VerifyPassword(model.Password, usuario.PasswordHash))
-        {
-            ModelState.AddModelError(string.Empty, "Email ou senha inválidos");
-            return View(model);
-        }
-
-        // Criar claims
-        var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
-            new Claim(ClaimTypes.Name, usuario.Nome),
-            new Claim(ClaimTypes.Email, usuario.Email),
-            new Claim(ClaimTypes.Role, usuario.Perfil.ToString()),
-            new Claim("CPF", usuario.CPF)
-        };
-
-        var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var claimsIdentity = new ClaimsIdentity(result.Claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var authProperties = new AuthenticationProperties
         {
             IsPersistent = model.RememberMe,
@@ -87,18 +73,17 @@ public class AccountController : Controller
             new ClaimsPrincipal(claimsIdentity),
             authProperties);
 
-        // Redirecionar baseado no perfil
+        // Preserva o destino original (ex.: página protegida que disparou o login).
+        // Url.IsLocalUrl evita open redirect para domínios externos.
         if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
         {
             return Redirect(model.ReturnUrl);
         }
 
-        return usuario.Perfil switch
-        {
-            Models.Enums.PerfilUsuario.Admin => RedirectToAction("Provas", "Admin"),
-            Models.Enums.PerfilUsuario.Coordenador => RedirectToAction("Index", "Correcao"),
-            _ => RedirectToAction("Index", "Home")
-        };
+        // Hoje apenas o administrador autentica por email/senha, então o destino
+        // padrão é a área administrativa. Quando houver outros perfis com login
+        // próprio (ex.: Coordenador), introduzir aqui a decisão de destino por perfil.
+        return RedirectToAction("Provas", "Provas");
     }
 
     [HttpPost]
@@ -112,8 +97,5 @@ public class AccountController : Controller
 
     [HttpGet]
     [AllowAnonymous]
-    public IActionResult AccessDenied()
-    {
-        return View();
-    }
+    public IActionResult AccessDenied() => View();
 }

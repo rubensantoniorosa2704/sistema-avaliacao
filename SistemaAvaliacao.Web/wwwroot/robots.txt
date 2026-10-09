@@ -1,0 +1,4 @@
+# Sistema de Avaliação — aplicação privada/autenticada.
+# Não deve ser rastreada nem indexada por mecanismos de busca.
+User-agent: *
+Disallow: /

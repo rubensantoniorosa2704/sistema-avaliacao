@@ -9,15 +9,15 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body d-grid gap-2">
-                <a asp-action="ExportarResultadosCsv" asp-route-id="@Model.Id" class="btn btn-success">
+                <a asp-controller="Exportacao" asp-action="ExportarResultadosCsv" asp-route-id="@Model.Id" class="btn btn-success">
                     <i class="fas fa-file-csv me-2"></i>Resultados CSV
                     <small class="d-block text-white-50">Acertos, erros e pendências por aluno</small>
                 </a>
-                <a asp-action="ExportarMatrizRespostas" asp-route-id="@Model.Id" class="btn btn-outline-secondary">
+                <a asp-controller="Exportacao" asp-action="ExportarMatrizRespostas" asp-route-id="@Model.Id" class="btn btn-outline-secondary">
                     <i class="fas fa-file-csv me-2"></i>Matriz CSV
                     <small class="d-block text-muted">Respostas 0/1 para análise psicométrica</small>
                 </a>
-                <a asp-action="ExportarResultadosXlsx" asp-route-id="@Model.Id" class="btn btn-outline-success">
+                <a asp-controller="Exportacao" asp-action="ExportarResultadosXlsx" asp-route-id="@Model.Id" class="btn btn-outline-success">
                     <i class="fas fa-file-excel me-2"></i>Relatório XLSX
                     <small class="d-block text-muted">Respostas, acertos e score por aluno</small>
                 </a>

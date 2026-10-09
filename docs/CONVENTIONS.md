@@ -18,8 +18,12 @@ Controller  →  Service (quando há lógica)  →  ApplicationDbContext (EF Cor
 
 - **Controller**: fino. Valida entrada, orquestra, devolve View/JSON. Não contém
   regra de negócio pesada nem acesso a dados complexo.
-- **Service**: lógica de verdade (OMR, exportação, importação, PDF, tentativas).
+- **Service**: lógica de verdade (OMR, exportação, importação, PDF, tentativas)
+  e também o CRUD/regras de cada domínio administrativo (`ProvaService`,
+  `QuestaoProvaService`, `AlunoProvaService`, `FolhaProvaService`).
   Nomeados por responsabilidade: `TentativaExameService`, `ExportacaoXlsxService`.
+  Regras compartilhadas entre domínios ficam em um único service dono da regra
+  (ex: `ProvaService.EstaBloqueada` / `PodeExportar`, reusadas por outros domínios).
 - **ApplicationDbContext**: único ponto de acesso a dados. Não envelopamos em
   Repository — o `DbContext` já é Unit of Work + repositório.
 - **ViewModel ≠ Entidade**: controllers nunca entregam entidades à view. Sempre
@@ -30,7 +34,9 @@ Controller  →  Service (quando há lógica)  →  ApplicationDbContext (EF Cor
 
 ```
 SistemaAvaliacao.Web/
-  Controllers/        # 1 controller por área (Home, Account, Admin, Correcao, Exame)
+  Controllers/        # Home, Account, Correcao, Exame + controllers de domínio
+                      #   da área admin: Provas, Questoes, Alunos, Folhas, Exportacao
+                      #   (ver §4). Admin só mantém o landing /Admin -> Provas.
   Services/           # lógica de negócio; subpasta Omr/ para o pipeline de leitura óptica
   Data/               # ApplicationDbContext, DbInitializer, DatabaseConfiguration
   Models/
@@ -63,14 +69,28 @@ SistemaAvaliacao.CorrecaoWorker/   # worker de OMR (compartilha o DbContext da W
 - **Feedback ao usuário**, padrão por tipo de ação:
   - **Full-page / redirect**: `TempData["Sucesso"]` / `TempData["Erro"]`.
   - **AJAX**: retornar JSON (`Json(new { sucesso, erro })`) ou `Ok/BadRequest`.
-- Lógica repetida entre actions vira método privado (ex: `AplicarEdicaoProvaAsync`).
+- **Controllers de domínio na área admin**: a área administrativa é dividida por
+  domínio — `ProvasController`, `QuestoesController`, `AlunosController`,
+  `FolhasController`, `ExportacaoController`. Cada um é fino e delega a lógica ao
+  service do domínio; `AdminController` guarda apenas o landing `/Admin`.
+- **Preservação de URL**: os controllers de domínio usam `[Route("Admin/[action]")]`
+  para manter as URLs legadas `/Admin/<Action>`. Ao referenciar essas actions a
+  partir de outro controller/view, use `asp-controller`/`RedirectToAction` com o
+  **nome do controller de destino** (ex: `"Provas"`, `"Questoes"`) — não `"Admin"`.
+- **Views compartilhadas**: as views da área admin seguem em `Views/Admin/`.
+  Quando um controller de domínio renderiza uma dessas views, aponte o caminho
+  explícito (`View("~/Views/Admin/<Nome>.cshtml", vm)`).
+- Lógica repetida entre actions vira método privado; regra de negócio ou acesso
+  a dados vai para o service do domínio (ver §1), não para o controller.
 
 ## 5. ViewModels
 
 - Vivem em `Models/ViewModels/`. São DTOs: propriedades + lógica de apresentação
   simples (ex: `StatusCss`, `PodeIniciar`). Sem acesso a dados.
 - Validação de entrada via DataAnnotations (`[Required]`, `[StringLength]`).
-  Regras cruzadas simples (ex: `DataFim > DataInicio`) podem ficar no controller.
+  Regras cruzadas (ex: `DataFim > DataInicio`) ficam no service do domínio junto
+  com a persistência (ex: `ProvaService.CriarAsync`/`EditarAsync`), que devolve
+  um resultado tipado (bool/enum + mensagem) para o controller traduzir em HTTP.
 - Mapeamento entidade→ViewModel é **manual e explícito** (sem AutoMapper).
 
 ## 6. Views (.cshtml)
@@ -124,6 +144,9 @@ Regra (já declarada no topo de `wwwroot/css/site.css`):
 - Emails normalizados para lowercase na gravação e na busca.
 - Uploads validados por extensão, MIME **e** conteúdo real (magic bytes).
 - Não versionar segredos (`bootstrap.env`, `data/keys/`, `.db`).
+- Aplicação privada: **não indexável** por buscadores. `_Layout` emite
+  `<meta name="robots" content="noindex, nofollow">` e há `wwwroot/robots.txt`
+  com `Disallow: /`. Mantenha ambos ao criar novas páginas/layouts.
 
 ## 11. Verificação antes de concluir
 

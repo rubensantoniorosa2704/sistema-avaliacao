@@ -10,7 +10,7 @@
                 <p class="text-muted small mb-3" id="modalNomeAluno"></p>
                 <div class="d-flex gap-2 justify-content-center">
                     <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancelar</button>
-                    <form asp-action="RemoverAlunoProva" method="post">
+                    <form asp-controller="Alunos" asp-action="RemoverAlunoProva" method="post">
                         <input type="hidden" name="provaId" value="@Model.Id" />
                         <input type="hidden" name="alunoId" id="removerAlunoId" />
                         <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-times me-1"></i>Remover</button>

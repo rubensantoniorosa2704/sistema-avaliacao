@@ -52,6 +52,11 @@ builder.Services.AddMemoryCache();
 // o serviço em si só lê o DbContext scoped na primeira carga de cada prova.
 builder.Services.AddScoped<QuestoesProvaCache>();
 builder.Services.AddScoped<PasswordService>();
+builder.Services.AddScoped<ProvaService>();
+builder.Services.AddScoped<QuestaoProvaService>();
+builder.Services.AddScoped<AlunoProvaService>();
+builder.Services.AddScoped<FolhaProvaService>();
+builder.Services.AddScoped<LoginService>();
 builder.Services.AddScoped<ImageUploadService>();
 builder.Services.AddScoped<ImportacaoAlunosService>();
 builder.Services.AddScoped<XlsxProvaImportService>();
