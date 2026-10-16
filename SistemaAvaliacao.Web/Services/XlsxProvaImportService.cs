@@ -39,13 +39,12 @@ public class XlsxProvaImportService
         if (rows.Count <= 1)
             throw new InvalidOperationException("A planilha não contém linhas de dados de questões.");
 
-        var cabecalhos = rows[0].Cells().Select(c => NormalizarCabecalho(c.Value.ToString())).ToList();
         var indices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        for (var i = 0; i < cabecalhos.Count; i++)
+        foreach (var celulaCabecalho in rows[0].Cells())
         {
-            var nome = cabecalhos[i];
+            var nome = NormalizarCabecalho(celulaCabecalho.Value.ToString());
             if (!string.IsNullOrWhiteSpace(nome))
-                indices[nome] = i;
+                indices[nome] = celulaCabecalho.Address.ColumnNumber; // coluna REAL (1-based), gap-safe
         }
 
         var obrigatorios = new[] { "numero_questao", "comando", "alternativa_a", "alternativa_b", "gabarito" };
@@ -61,24 +60,23 @@ public class XlsxProvaImportService
         var itens = new List<ImportarQuestaoItem>();
         foreach (var row in rows.Skip(1))
         {
-            var cells = row.Cells().ToList();
-            var numero = ObterInt(cells, indices, "numero_questao");
+            var numero = ObterInt(row, indices, "numero_questao");
             if (numero == null)
             {
                 avisos.Add("Linha ignorada porque não possui número de questão válido.");
                 continue;
             }
 
-            var titulo = ObterTexto(cells, indices, "titulo");
-            var enunciado = ObterTexto(cells, indices, "enunciado");
-            var comando = ObterTexto(cells, indices, "comando") ?? string.Empty;
-            var alternativaA = LimparAlternativa(ObterTexto(cells, indices, "alternativa_a"));
-            var alternativaB = LimparAlternativa(ObterTexto(cells, indices, "alternativa_b"));
-            var alternativaC = LimparAlternativa(ObterTexto(cells, indices, "alternativa_c"));
-            var alternativaD = LimparAlternativa(ObterTexto(cells, indices, "alternativa_d"));
-            var alternativaE = LimparAlternativa(ObterTexto(cells, indices, "alternativa_e"));
-            var gabarito = ObterTexto(cells, indices, "gabarito");
-            var fonte = ObterTexto(cells, indices, "suporte_legenda_fonte")
+            var titulo = ObterTexto(row, indices, "titulo");
+            var enunciado = ObterTexto(row, indices, "enunciado");
+            var comando = ObterTexto(row, indices, "comando") ?? string.Empty;
+            var alternativaA = LimparAlternativa(ObterTexto(row, indices, "alternativa_a"));
+            var alternativaB = LimparAlternativa(ObterTexto(row, indices, "alternativa_b"));
+            var alternativaC = LimparAlternativa(ObterTexto(row, indices, "alternativa_c"));
+            var alternativaD = LimparAlternativa(ObterTexto(row, indices, "alternativa_d"));
+            var alternativaE = LimparAlternativa(ObterTexto(row, indices, "alternativa_e"));
+            var gabarito = ObterTexto(row, indices, "gabarito");
+            var fonte = ObterTexto(row, indices, "suporte_legenda_fonte")
                 ?? (metadadosPorQuestao.TryGetValue(numero.Value, out var metadados) ? metadados.Fonte : null);
             var descricaoAcessibilidade = metadadosPorQuestao.TryGetValue(numero.Value, out metadados)
                 ? metadados.DescricaoAcessibilidade
@@ -111,6 +109,10 @@ public class XlsxProvaImportService
                 item.Problemas.Add("Alternativas A e B obrigatórias não foram preenchidas.");
             if (item.AlternativaCorreta == null)
                 item.Problemas.Add("Gabarito ausente ou inválido na planilha.");
+            else if (!GabaritoCabeNasAlternativas(item.AlternativaCorreta.Value, item.NumeroAlternativas))
+                item.Problemas.Add(
+                    $"Gabarito '{item.AlternativaCorreta}' aponta para uma alternativa que não existe " +
+                    $"(a questão tem apenas {item.NumeroAlternativas} alternativas).");
 
             itens.Add(item);
         }
@@ -180,24 +182,24 @@ public class XlsxProvaImportService
         return valor;
     }
 
-    private static int? ObterInt(List<IXLCell> cells, Dictionary<string, int> indices, string nomeCampo)
+    private static int? ObterInt(IXLRow row, Dictionary<string, int> indices, string nomeCampo)
     {
-        if (!indices.TryGetValue(nomeCampo, out var idx) || idx >= cells.Count)
+        if (!indices.TryGetValue(nomeCampo, out var coluna))
             return null;
 
-        var valor = cells[idx].GetString().Trim();
+        var valor = row.Cell(coluna).GetString().Trim();
         if (string.IsNullOrWhiteSpace(valor))
             return null;
 
         return int.TryParse(valor, out var numero) ? numero : null;
     }
 
-    private static string? ObterTexto(List<IXLCell> cells, Dictionary<string, int> indices, string nomeCampo)
+    private static string? ObterTexto(IXLRow row, Dictionary<string, int> indices, string nomeCampo)
     {
-        if (!indices.TryGetValue(nomeCampo, out var idx) || idx >= cells.Count)
+        if (!indices.TryGetValue(nomeCampo, out var coluna))
             return null;
 
-        var valor = cells[idx].GetString();
+        var valor = row.Cell(coluna).GetString();
         return string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();
     }
 
@@ -241,6 +243,17 @@ public class XlsxProvaImportService
         return Math.Clamp(count, 2, 5);
     }
 
+    /// <summary>
+    /// Verifica se a letra do gabarito está dentro das alternativas que a questão realmente tem.
+    /// Ex.: gabarito 'E' numa questão de 4 alternativas (A–D) NÃO cabe — nenhum aluno conseguiria
+    /// acertar, e a correção penalizaria todos silenciosamente.
+    /// </summary>
+    private static bool GabaritoCabeNasAlternativas(char gabarito, int numeroAlternativas)
+    {
+        var letraMax = (char)('A' + Math.Clamp(numeroAlternativas, 2, 5) - 1);
+        return gabarito >= 'A' && gabarito <= letraMax;
+    }
+
     private Dictionary<int, string> ObterImagensPorQuestao(XLWorkbook workbook)
     {
         var imagensReconstituidas = ReconstituirImagensBase64(workbook);
@@ -254,30 +267,28 @@ public class XlsxProvaImportService
         if (rows.Count <= 1)
             return imagensPorQuestao;
 
-        var cabecalhos = rows[0].Cells().Select(c => NormalizarCabecalho(c.Value.ToString())).ToList();
         var indices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        for (var i = 0; i < cabecalhos.Count; i++)
+        foreach (var celulaCabecalho in rows[0].Cells())
         {
-            var nome = cabecalhos[i];
+            var nome = NormalizarCabecalho(celulaCabecalho.Value.ToString());
             if (!string.IsNullOrWhiteSpace(nome))
-                indices[nome] = i;
+                indices[nome] = celulaCabecalho.Address.ColumnNumber; // coluna REAL (1-based), gap-safe
         }
 
         foreach (var row in rows.Skip(1))
         {
-            var cells = row.Cells().ToList();
-            var numero = ObterInt(cells, indices, "numero_questao");
+            var numero = ObterInt(row, indices, "numero_questao");
             if (numero == null)
                 continue;
 
-            var imagemId = ObterTexto(cells, indices, "imagem_id");
+            var imagemId = ObterTexto(row, indices, "imagem_id");
             if (string.IsNullOrWhiteSpace(imagemId))
                 continue;
 
             if (!imagensReconstituidas.TryGetValue(imagemId, out var bytes) || bytes.Length == 0)
                 continue;
 
-            var nomeArquivo = ObterTexto(cells, indices, "arquivo_imagem") ?? $"{imagemId}.png";
+            var nomeArquivo = ObterTexto(row, indices, "arquivo_imagem") ?? $"{imagemId}.png";
             var url = SalvarImagem(bytes, nomeArquivo);
             if (!string.IsNullOrWhiteSpace(url))
                 imagensPorQuestao[numero.Value] = url;
@@ -297,25 +308,23 @@ public class XlsxProvaImportService
         if (rows.Count <= 1)
             return metadados;
 
-        var cabecalhos = rows[0].Cells().Select(c => NormalizarCabecalho(c.Value.ToString())).ToList();
         var indices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        for (var i = 0; i < cabecalhos.Count; i++)
+        foreach (var celulaCabecalho in rows[0].Cells())
         {
-            var nome = cabecalhos[i];
+            var nome = NormalizarCabecalho(celulaCabecalho.Value.ToString());
             if (!string.IsNullOrWhiteSpace(nome))
-                indices[nome] = i;
+                indices[nome] = celulaCabecalho.Address.ColumnNumber; // coluna REAL (1-based), gap-safe
         }
 
         foreach (var row in rows.Skip(1))
         {
-            var cells = row.Cells().ToList();
-            var numero = ObterInt(cells, indices, "numero_questao");
+            var numero = ObterInt(row, indices, "numero_questao");
             if (numero == null)
                 continue;
 
-            var temImagem = !string.IsNullOrWhiteSpace(ObterTexto(cells, indices, "imagem_id"));
-            var titulo = ObterTexto(cells, indices, "titulo_suporte");
-            var fonte = ObterTexto(cells, indices, "legenda_fonte");
+            var temImagem = !string.IsNullOrWhiteSpace(ObterTexto(row, indices, "imagem_id"));
+            var titulo = ObterTexto(row, indices, "titulo_suporte");
+            var fonte = ObterTexto(row, indices, "legenda_fonte");
 
             if (!metadados.TryGetValue(numero.Value, out var atual))
                 atual = (null, null);
@@ -350,22 +359,20 @@ public class XlsxProvaImportService
         if (rows.Count <= 1)
             return new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
 
-        var cabecalhos = rows[0].Cells().Select(c => NormalizarCabecalho(c.Value.ToString())).ToList();
         var indices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        for (var i = 0; i < cabecalhos.Count; i++)
+        foreach (var celulaCabecalho in rows[0].Cells())
         {
-            var nome = cabecalhos[i];
+            var nome = NormalizarCabecalho(celulaCabecalho.Value.ToString());
             if (!string.IsNullOrWhiteSpace(nome))
-                indices[nome] = i;
+                indices[nome] = celulaCabecalho.Address.ColumnNumber; // coluna REAL (1-based), gap-safe
         }
 
         var chunksPorImagem = new Dictionary<string, List<(int Parte, string Base64Chunk)>>(StringComparer.OrdinalIgnoreCase);
         foreach (var row in rows.Skip(1))
         {
-            var cells = row.Cells().ToList();
-            var imagemId = ObterTexto(cells, indices, "imagem_id");
-            var base64Chunk = ObterTexto(cells, indices, "base64_chunk");
-            var parte = ObterInt(cells, indices, "parte");
+            var imagemId = ObterTexto(row, indices, "imagem_id");
+            var base64Chunk = ObterTexto(row, indices, "base64_chunk");
+            var parte = ObterInt(row, indices, "parte");
             if (string.IsNullOrWhiteSpace(imagemId) || string.IsNullOrWhiteSpace(base64Chunk) || parte == null)
                 continue;
 
@@ -403,8 +410,8 @@ public class XlsxProvaImportService
         if (bytes.Length == 0)
             return null;
 
-        var pasta = Path.Combine(_environment.WebRootPath, "uploads", "questoes");
-        Directory.CreateDirectory(pasta);
+        var pasta = SistemaAvaliacao.Web.Helpers.CaminhoArmazenamento
+            .ResolverSubpasta(_environment.WebRootPath, "questoes");
 
         var extensao = ".png";
         if (!string.IsNullOrWhiteSpace(nomeArquivo))

@@ -205,13 +205,19 @@ public class QuestoesController(
         var semComando = itensParaGravar.Count(i => string.IsNullOrWhiteSpace(i.Comando));
         var semAlternativasBasicas = itensParaGravar.Count(i =>
             string.IsNullOrWhiteSpace(i.AlternativaA) || string.IsNullOrWhiteSpace(i.AlternativaB));
+        // Gabarito que aponta para uma alternativa inexistente (ex.: 'E' numa questão de 4):
+        // nenhum aluno acertaria e a correção penalizaria todos. Bloqueia antes de gravar.
+        var gabaritoForaDoRange = itensParaGravar.Count(i =>
+            i.AlternativaCorreta != null &&
+            i.AlternativaCorreta.Value > (char)('A' + Math.Clamp(i.NumeroAlternativas, 2, 5) - 1));
 
-        if (semGabarito > 0 || semComando > 0 || semAlternativasBasicas > 0)
+        if (semGabarito > 0 || semComando > 0 || semAlternativasBasicas > 0 || gabaritoForaDoRange > 0)
         {
             var partes = new List<string>();
             if (semGabarito > 0) partes.Add($"{semGabarito} sem alternativa correta");
             if (semComando > 0) partes.Add($"{semComando} sem comando");
             if (semAlternativasBasicas > 0) partes.Add($"{semAlternativasBasicas} sem alternativa A/B");
+            if (gabaritoForaDoRange > 0) partes.Add($"{gabaritoForaDoRange} com gabarito apontando para alternativa inexistente");
 
             TempData["Erro"] = $"Revise antes de confirmar: {string.Join("; ", partes)}.";
             model.NomeProva = prova.Nome;

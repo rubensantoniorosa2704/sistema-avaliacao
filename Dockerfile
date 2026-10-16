@@ -31,6 +31,7 @@ RUN chmod +x /entrypoint.sh
 ENV ASPNETCORE_URLS=http://+:8080 \
     ASPNETCORE_ENVIRONMENT=Production \
     SISTEMA_AVALIACAO_DB=/data/sistema_avaliacao.db \
+    SISTEMA_AVALIACAO_UPLOADS=/data/uploads \
     DATA_PROTECTION_KEYS_PATH=/data/keys
 
 EXPOSE 8080

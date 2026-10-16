@@ -97,6 +97,18 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 app.UseStaticFiles();
 
+// Serve os anexos de runtime (imagens de questão, PDFs de correção) a partir da raiz
+// PERSISTENTE de uploads sob a URL /uploads. Antes esses arquivos moravam em
+// wwwroot/uploads (efêmero no container); agora a raiz física é resolvida por
+// CaminhoArmazenamento (ex.: /data/uploads), mas a URL pública permanece /uploads,
+// então nenhum caminho já gravado no banco precisa mudar.
+var raizUploads = SistemaAvaliacao.Web.Helpers.CaminhoArmazenamento.ResolverRaiz(app.Environment.WebRootPath);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(raizUploads),
+    RequestPath = SistemaAvaliacao.Web.Helpers.CaminhoArmazenamento.UrlPrefix
+});
+
 app.UseRouting();
 
 app.UseAuthentication(); // Adicionar antes de UseAuthorization

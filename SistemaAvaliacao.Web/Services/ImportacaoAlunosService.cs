@@ -121,8 +121,19 @@ public class ImportacaoAlunosService
         var email = campos[2].Trim().ToLowerInvariant();
         var cpf = new string(campos[3].Where(char.IsDigit).ToArray());
 
-        if (string.IsNullOrWhiteSpace(nome) || cpf.Length < 11)
-            return (null, $"Linha {linhaNum}: nome vazio ou CPF inválido");
+        if (string.IsNullOrWhiteSpace(nome))
+            return (null, $"Linha {linhaNum}: nome vazio");
+
+        // CPF deve ter EXATAMENTE 11 dígitos. O erro mais comum aqui é o Excel formatar o
+        // CPF como número e comer o(s) zero(s) à esquerda ao salvar o CSV (ex.: 01234567890
+        // vira 1234567890). Por isso a mensagem para "menos de 11" aponta a causa provável,
+        // em vez de um "CPF inválido" genérico que não ajuda quem está importando.
+        if (cpf.Length < 11)
+            return (null, $"Linha {linhaNum}: CPF com {cpf.Length} dígito(s) (esperado 11). " +
+                          "Provável zero à esquerda removido pelo Excel — formate a coluna de CPF como Texto antes de exportar o CSV.");
+
+        if (cpf.Length > 11)
+            return (null, $"Linha {linhaNum}: CPF com {cpf.Length} dígitos (esperado 11). Verifique se há dígitos a mais.");
 
         // Já criado nesta mesma importação?
         if (novosPorCpf.TryGetValue(cpf, out var existenteNoLote))

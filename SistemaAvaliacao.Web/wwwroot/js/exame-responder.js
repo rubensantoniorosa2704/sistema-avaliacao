@@ -125,27 +125,90 @@
         });
 
         // Cronômetro
-        function atualizarCronometro() {
-            const agora = new Date();
-            const restante = Math.max(0, Math.floor((dataFim - agora) / 1000));
-            const horas = Math.floor(restante / 3600);
-            const min = Math.floor((restante % 3600) / 60);
-            const seg = restante % 60;
+        //
+        // A VERDADE do tempo é o servidor (DataFim - UtcNow), nunca o relógio da máquina
+        // do aluno — que pode estar adiantado ou atrasado. Por isso sincronizamos com o
+        // endpoint /tempo-restante periodicamente e, entre as sincronizações, apenas
+        // decrementamos localmente para a contagem ficar suave (sem pular de segundo a
+        // segundo conforme a rede). dataFim é usado só como estimativa inicial até a
+        // primeira sincronização chegar.
+        const INTERVALO_SYNC_MS = 20000;   // re-sincroniza com o servidor a cada 20s
+        const SEGUNDOS_AVISO = 60;         // avisa quando faltar 1 minuto
+        let segundosRestantes = Math.max(0, Math.floor((dataFim - new Date()) / 1000));
+        let avisoUmMinutoExibido = false;
+        let tempoEncerrado = false;
 
+        function formatarTempo(totalSegundos) {
+            const horas = Math.floor(totalSegundos / 3600);
+            const min = Math.floor((totalSegundos % 3600) / 60);
+            const seg = totalSegundos % 60;
             if (horas > 0) {
-                $('#cronometro').text(horas + ':' + String(min).padStart(2, '0') + ':' + String(seg).padStart(2, '0'));
-            } else {
-                $('#cronometro').text(String(min).padStart(2, '0') + ':' + String(seg).padStart(2, '0'));
+                return horas + ':' + String(min).padStart(2, '0') + ':' + String(seg).padStart(2, '0');
             }
+            return String(min).padStart(2, '0') + ':' + String(seg).padStart(2, '0');
+        }
 
-            if (restante === 0 && !finalizando) {
-                $('.alt-radio').prop('disabled', true);
-                mostrarMensagem('Prazo da prova expirou.', 'error');
+        function renderizarCronometro() {
+            $('#cronometro').text(formatarTempo(Math.max(0, segundosRestantes)));
+        }
+
+        function aoEncerrarTempo() {
+            if (tempoEncerrado) return;
+            tempoEncerrado = true;
+            segundosRestantes = 0;
+            renderizarCronometro();
+            // Corte limpo: não aceita mais marcações. O servidor também recusa qualquer
+            // resposta que chegue após o DataFim, então nada enviado tarde é aceito.
+            $('.alt-radio').prop('disabled', true);
+            if (!finalizando) {
+                mostrarMensagem('O tempo da prova terminou. Suas respostas salvas foram registradas.', 'error');
                 finalizarProva();
             }
         }
-        atualizarCronometro();
-        setInterval(atualizarCronometro, 1000);
+
+        // Tique local a cada segundo: contagem suave entre as sincronizações.
+        function tiqueLocal() {
+            if (tempoEncerrado) return;
+            segundosRestantes = Math.max(0, segundosRestantes - 1);
+            renderizarCronometro();
+
+            if (!avisoUmMinutoExibido && segundosRestantes > 0 && segundosRestantes <= SEGUNDOS_AVISO) {
+                avisoUmMinutoExibido = true;
+                mostrarMensagem('Falta 1 minuto! Revise suas respostas e finalize a prova.', 'warning');
+            }
+
+            if (segundosRestantes <= 0) {
+                aoEncerrarTempo();
+            }
+        }
+
+        // Sincronização com o servidor: ajusta a base de tempo pela verdade autoritativa.
+        function sincronizarTempo() {
+            if (tempoEncerrado) return;
+            $.getJSON(`/prova/${token}/tempo-restante?tentativa=${encodeURIComponent(tentativa)}`)
+                .done(function (resp) {
+                    if (!resp) return;
+                    if (resp.encerrada || resp.segundosRestantes <= 0) {
+                        aoEncerrarTempo();
+                        return;
+                    }
+                    // Confia no servidor: corrige qualquer deriva do relógio local.
+                    segundosRestantes = resp.segundosRestantes;
+                    renderizarCronometro();
+                    if (!avisoUmMinutoExibido && segundosRestantes <= SEGUNDOS_AVISO) {
+                        avisoUmMinutoExibido = true;
+                        mostrarMensagem('Falta 1 minuto! Revise suas respostas e finalize a prova.', 'warning');
+                    }
+                });
+            // Falha de rede aqui é ignorada de propósito: a contagem local segue e a
+            // próxima tentativa de sincronização corrige. O corte final é garantido pelo
+            // servidor, que recusa respostas após o DataFim.
+        }
+
+        renderizarCronometro();
+        sincronizarTempo();                 // sincroniza já na carga
+        setInterval(tiqueLocal, 1000);
+        setInterval(sincronizarTempo, INTERVALO_SYNC_MS);
 
         // Navegação
         function atualizarPontoAtual(ordem) {
@@ -330,6 +393,17 @@
 
         function finalizarProva() {
             if (finalizando) return;
+
+            // Se há respostas ainda em trânsito, espera um instante por elas antes de
+            // fechar. São envios que podem ter saído ANTES do DataFim (portanto legítimos);
+            // dar essa breve janela evita descartar a última marcação do aluno. Mesmo assim,
+            // o servidor é quem decide: só grava o que chegou dentro do prazo.
+            if (salvamentosPendentes > 0) {
+                $('.alt-radio').prop('disabled', true);
+                setTimeout(finalizarProva, 400);
+                return;
+            }
+
             finalizando = true;
             $('.btn-finalizar, .btn-proxima, .btn-anterior, .btn-limpar, .alt-radio').prop('disabled', true);
             $('#btnFinalizar').prop('disabled', true).html('Finalizando...');

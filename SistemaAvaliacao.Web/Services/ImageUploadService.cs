@@ -52,12 +52,9 @@ public class ImageUploadService
                 return (false, null, "O conteúdo do arquivo não corresponde a uma imagem válida.");
             }
 
-            // Criar diretório de uploads se não existir
-            var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "questoes");
-            if (!Directory.Exists(uploadsFolder))
-            {
-                Directory.CreateDirectory(uploadsFolder);
-            }
+            // Diretório de uploads na raiz PERSISTENTE (ver CaminhoArmazenamento).
+            var uploadsFolder = SistemaAvaliacao.Web.Helpers.CaminhoArmazenamento
+                .ResolverSubpasta(_environment.WebRootPath, "questoes");
 
             // Gerar nome único para o arquivo
             var fileName = $"{Guid.NewGuid()}{extension}";
@@ -131,8 +128,10 @@ public class ImageUploadService
                 return true; // Não há imagem para excluir
             }
 
-            // Converter caminho relativo para absoluto
-            var filePath = Path.Combine(_environment.WebRootPath, imagePath.TrimStart('/'));
+            // O caminho salvo no banco é "/uploads/questoes/arquivo.ext". A raiz física
+            // pode ser persistente (/data/uploads) — resolve a partir dela, removendo o
+            // prefixo público "/uploads".
+            var filePath = ResolverCaminhoFisico(imagePath);
 
             if (File.Exists(filePath))
             {
@@ -160,7 +159,22 @@ public class ImageUploadService
             return false;
         }
 
-        var filePath = Path.Combine(_environment.WebRootPath, imagePath.TrimStart('/'));
+        var filePath = ResolverCaminhoFisico(imagePath);
         return File.Exists(filePath);
+    }
+
+    /// <summary>
+    /// Converte um caminho público "/uploads/questoes/arquivo.ext" no caminho físico real,
+    /// a partir da raiz persistente de uploads (ver CaminhoArmazenamento). O prefixo público
+    /// "/uploads" é removido porque a raiz física já corresponde a ele.
+    /// </summary>
+    private string ResolverCaminhoFisico(string imagePath)
+    {
+        var raiz = Helpers.CaminhoArmazenamento.ResolverRaiz(_environment.WebRootPath);
+        var relativo = imagePath.TrimStart('/');
+        const string prefixo = "uploads/";
+        if (relativo.StartsWith(prefixo, StringComparison.OrdinalIgnoreCase))
+            relativo = relativo.Substring(prefixo.Length);
+        return Path.Combine(raiz, relativo.Replace('/', Path.DirectorySeparatorChar));
     }
 }

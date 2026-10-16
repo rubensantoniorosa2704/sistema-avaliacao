@@ -96,8 +96,8 @@ public class CorrecaoController : Controller
             return RedirectToAction(nameof(Enviar), new { id = prova.Id });
         }
 
-        var pasta = Path.Combine(_environment.WebRootPath, "uploads", "correcoes");
-        Directory.CreateDirectory(pasta);
+        var pasta = SistemaAvaliacao.Web.Helpers.CaminhoArmazenamento
+            .ResolverSubpasta(_environment.WebRootPath, "correcoes");
         var lote = new LoteCorrecao
         {
             ProvaId = prova.Id,

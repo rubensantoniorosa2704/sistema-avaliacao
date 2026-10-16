@@ -13,6 +13,7 @@ primary_region = 'gru'
   ASPNETCORE_ENVIRONMENT = 'Production'
   DATA_PROTECTION_KEYS_PATH = '/data/keys'
   SISTEMA_AVALIACAO_DB = '/data/sistema_avaliacao.db'
+  SISTEMA_AVALIACAO_UPLOADS = '/data/uploads'
 
 [[mounts]]
   source = 'sistema_avaliacao_data'

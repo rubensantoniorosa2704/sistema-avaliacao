@@ -262,6 +262,38 @@ public class ExameController : Controller
     }
 
     /// <summary>
+    /// Tempo restante autoritativo da prova, calculado pelo relógio do servidor
+    /// (DataFim - UtcNow). O cliente usa isto para sincronizar o cronômetro, de modo
+    /// que o relógio da máquina do aluno não possa adiantar nem atrasar o fim da prova.
+    /// GET /prova/{token}/tempo-restante?tentativa={tokenTentativa}
+    /// </summary>
+    [HttpGet("prova/{token}/tempo-restante")]
+    public async Task<IActionResult> TempoRestante(Guid token, Guid tentativa)
+    {
+        var prova = await _context.Provas
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.TokenPublico == token);
+        if (prova == null) return Json(new { encerrada = true, segundosRestantes = 0L });
+
+        var provaAluno = await _context.ProvaAlunos
+            .AsNoTracking()
+            .FirstOrDefaultAsync(pa =>
+                pa.ProvaId == prova.Id &&
+                pa.TokenTentativa == tentativa);
+
+        // Tentativa inexistente ou já finalizada: para o cliente, acabou.
+        if (provaAluno == null || provaAluno.Status != StatusProvaAluno.EmAndamento)
+            return Json(new { encerrada = true, segundosRestantes = 0L });
+
+        var restante = prova.DataFim - DateTime.UtcNow;
+        var segundos = (long)Math.Floor(restante.TotalSeconds);
+        if (segundos <= 0)
+            return Json(new { encerrada = true, segundosRestantes = 0L });
+
+        return Json(new { encerrada = false, segundosRestantes = segundos });
+    }
+
+    /// <summary>
     /// Salvar resposta individual (AJAX). Valida TokenTentativa.
     /// POST /prova/{token}/salvar-resposta
     /// </summary>
