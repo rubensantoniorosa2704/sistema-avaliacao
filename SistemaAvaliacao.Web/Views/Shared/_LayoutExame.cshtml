@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] — Sistema de Avaliação</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/exame.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
@@ -19,6 +20,16 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script>
+        // Avisos da tela de prova. Sucesso some sozinho; ERRO fica até o aluno fechar,
+        // porque falha de salvamento numa prova não pode passar despercebida (ver Buraco A).
+        toastr.options = { positionClass: 'toast-top-center', closeButton: true, progressBar: true, timeOut: 4000 };
+        var _toastrError = toastr.error;
+        toastr.error = function (mensagem, titulo, opcoes) {
+            return _toastrError(mensagem, titulo, Object.assign({ timeOut: 0, extendedTimeOut: 0 }, opcoes || {}));
+        };
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
