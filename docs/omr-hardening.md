@@ -43,9 +43,16 @@ correto quando a suíte roda verde.
 - **Correção**: o QR passa a carregar o `TokenIdentificacao` (segredo único por folha);
   o worker casa a folha por esse token, não pelo id derivado. Resolve colisão E forja
   de uma vez. Sem compatibilidade retroativa — **nenhuma prova real foi gerada ainda**.
-- **Teste de fluxo crítico**: casamento por token (sucesso e rejeição de token
-  desconhecido/forjado); round-trip do payload do QR.
-- **Status**: ⬜ pendente
+  Payload do QR migrado para v2: `exam=<id>;token=<hex>;v=2` (o `exam` fica para
+  diagnóstico; a identidade é o `token`). `GuidToStableInt` sobra apenas no cabeçalho
+  legível por humanos, não mais como chave de identidade.
+- **Teste de fluxo crítico**:
+  - `QrPayloadTests` (4 casos): round-trip build/parse do token; payload vazio → nulos;
+    formato v1 legado (sem token) NÃO produz token (worker rejeita em vez de casar errado);
+    parse tolerante a partes malformadas.
+  - `OmrPipelineGoldenTests`: o caso de alinhamento+QR agora valida o round-trip REAL do
+    token pelo QR (geração → warp → ZXing).
+- **Status**: ✅ concluído
 
 ### 🟡 Item 3 — Destravar lote preso em `Processando`
 - **Risco**: se o worker morre no meio do processamento (reinício do container, OOM),

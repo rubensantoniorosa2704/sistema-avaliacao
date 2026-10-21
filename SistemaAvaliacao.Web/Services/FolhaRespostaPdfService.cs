@@ -101,6 +101,7 @@ public class FolhaRespostaPdfService
                 {
                     ExamId = GuidToStableInt(prova.Id),
                     StudentId = GuidToStableInt(aluno.Id),
+                    Token = folha.TokenIdentificacao,
                     StudentName = aluno.Nome ?? "---",
                     ExamName = prova.Nome ?? "Prova",
                     OptionCount = Math.Clamp(prova.NumeroAlternativas, 4, 5)
@@ -213,6 +214,7 @@ public class FolhaRespostaPdfService
                 {
                     ExamId = GuidToStableInt(prova.Id),
                     StudentId = GuidToStableInt(aluno.Id),
+                    Token = folha.TokenIdentificacao,
                     StudentName = aluno.Nome ?? "---",
                     ExamName = prova.Nome ?? "Prova",
                     OptionCount = Math.Clamp(prova.NumeroAlternativas, 4, 5)

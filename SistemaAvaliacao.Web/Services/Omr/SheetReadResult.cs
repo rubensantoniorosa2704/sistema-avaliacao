@@ -41,7 +41,12 @@ public sealed class SheetReadResult
     public string? QrPayload { get; init; }
 
     public int? ExamId { get; init; }
-    public int? StudentId { get; init; }
+
+    /// <summary>
+    /// Token de identificação da folha lido do QR (chave autoritativa de identidade).
+    /// Null se o QR não foi decodificado ou não contém token.
+    /// </summary>
+    public string? Token { get; init; }
 
     public required IReadOnlyList<QuestionResult> Questions { get; init; }
 

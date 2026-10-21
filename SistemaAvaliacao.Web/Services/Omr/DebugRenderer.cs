@@ -38,7 +38,7 @@ public static class DebugRenderer
 
         // Cabeçalho de status
         string head = result.Aligned
-            ? $"ALINHADO | QR: {(result.QrPayload ?? "N/A")} | exam={result.ExamId} student={result.StudentId}"
+            ? $"ALINHADO | QR: {(result.QrPayload ?? "N/A")} | exam={result.ExamId} token={result.Token ?? "N/A"}"
             : "NAO ALINHADO (marcadores nao detectados)";
         Cv2.PutText(img, head, new Point(20, 30), font, 0.55, new Scalar(80, 0, 0), 2);
 
@@ -101,7 +101,7 @@ public static class DebugRenderer
             result.Aligned,
             result.QrPayload,
             result.ExamId,
-            result.StudentId,
+            result.Token,
             result.Warnings,
             Summary = new
             {

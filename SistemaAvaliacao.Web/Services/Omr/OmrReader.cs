@@ -63,7 +63,7 @@ public sealed class OmrReader
 
         // 2) Ler QR na folha normalizada.
         string? qr = TryReadQr(aligned, warnings);
-        var (examId, studentId) = CardGenerator.ParseQrPayload(qr);
+        var (examId, token) = CardGenerator.ParseQrPayload(qr);
 
         // 3) Binarizar para medir preenchimento (texto/bolhas escuras -> branco na máscara).
         using var gray = new Mat();
@@ -86,7 +86,7 @@ public sealed class OmrReader
             Aligned = true,
             QrPayload = qr,
             ExamId = examId,
-            StudentId = studentId,
+            Token = token,
             Questions = results,
             Warnings = warnings
         };

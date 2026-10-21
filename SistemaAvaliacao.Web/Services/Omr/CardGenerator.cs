@@ -14,6 +14,12 @@ public sealed class StudentCardInfo
 {
     public required int ExamId { get; init; }
     public required int StudentId { get; init; }
+    /// <summary>
+    /// Token de identificação único da folha (segredo por folha, hex). É esta a chave
+    /// AUTORITATIVA de identidade usada na correção — o worker casa a folha por ela,
+    /// não pelo StudentId (que é derivado do Guid e não é segredo). Ver docs/omr-hardening.md.
+    /// </summary>
+    public string Token { get; init; } = "";
     public string StudentName { get; init; } = "";
     public string ExamName { get; init; } = "";
     /// <summary>Número de alternativas válidas nesta prova (4 => A-D, 5 => A-E).</summary>
@@ -36,22 +42,29 @@ public sealed class CardGenerator
         _arucoDict = CvAruco.GetPredefinedDictionary(PredefinedDictionaryName.Dict4X4_50);
     }
 
-    /// <summary>Formato do payload do QR: "exam=&lt;id&gt;;student=&lt;id&gt;;v=1".</summary>
-    public static string BuildQrPayload(int examId, int studentId)
-        => $"exam={examId};student={studentId};v=1";
+    /// <summary>
+    /// Formato do payload do QR (v2): "exam=&lt;id&gt;;token=&lt;hex&gt;;v=2".
+    /// O <paramref name="token"/> (TokenIdentificacao da folha) é a chave AUTORITATIVA
+    /// de identidade — a correção casa a folha por ele. O exam é mantido para validação
+    /// e diagnóstico. Antes o payload trazia student=&lt;int derivado do Guid&gt;, que não
+    /// era segredo e permitia colisão/forja (ver docs/omr-hardening.md).
+    /// </summary>
+    public static string BuildQrPayload(int examId, string token)
+        => $"exam={examId};token={token};v=2";
 
-    public static (int? examId, int? studentId) ParseQrPayload(string? payload)
+    public static (int? examId, string? token) ParseQrPayload(string? payload)
     {
         if (string.IsNullOrWhiteSpace(payload)) return (null, null);
-        int? exam = null, student = null;
+        int? exam = null;
+        string? token = null;
         foreach (var part in payload.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             var kv = part.Split('=', 2);
             if (kv.Length != 2) continue;
             if (kv[0] == "exam" && int.TryParse(kv[1], out var e)) exam = e;
-            else if (kv[0] == "student" && int.TryParse(kv[1], out var s)) student = s;
+            else if (kv[0] == "token" && !string.IsNullOrWhiteSpace(kv[1])) token = kv[1];
         }
-        return (exam, student);
+        return (exam, token);
     }
 
     /// <summary>
@@ -100,7 +113,10 @@ public sealed class CardGenerator
         var canvas = new Mat(_layout.CanvasHeight, _layout.CanvasWidth, MatType.CV_8UC3, Scalar.White);
 
         DrawArucoMarkers(canvas);
-        DrawQr(canvas, BuildQrPayload(info.ExamId, info.StudentId));
+        // Token é a identidade autoritativa impressa no QR. Se vier vazio (uso de teste
+        // antigo), cai num marcador derivado do StudentId só para o QR não ficar sem token.
+        var qrToken = string.IsNullOrWhiteSpace(info.Token) ? $"s{info.StudentId}" : info.Token;
+        DrawQr(canvas, BuildQrPayload(info.ExamId, qrToken));
         DrawHeader(canvas, info);
         DrawGrid(canvas, info.OptionCount);
 

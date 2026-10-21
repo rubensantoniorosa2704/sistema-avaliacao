@@ -26,6 +26,7 @@ namespace SistemaAvaliacao.Tests;
 public class OmrPipelineGoldenTests
 {
     private const int OptionCount = 5;
+    private const string TokenDeTeste = "A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6";
 
     private static SheetReadResult LerCartaoDeTeste()
     {
@@ -38,6 +39,7 @@ public class OmrPipelineGoldenTests
         {
             ExamId = 123,
             StudentId = 456,
+            Token = TokenDeTeste,
             StudentName = "Aluno de Teste",
             ExamName = "Prova de Teste",
             OptionCount = OptionCount
@@ -58,9 +60,10 @@ public class OmrPipelineGoldenTests
         Assert.True(r.Aligned,
             "O cartão gerado deve alinhar pelos 4 marcadores ArUco. Avisos: " +
             string.Join(" | ", r.Warnings));
-        // O QR embute exam=123;student=456 — o parse deve recuperar os dois.
+        // O QR embute exam=123;token=<hex> — o parse deve recuperar ambos (round-trip real
+        // passando por geração do QR -> warp -> decodificação ZXing).
         Assert.Equal(123, r.ExamId);
-        Assert.Equal(456, r.StudentId);
+        Assert.Equal(TokenDeTeste, r.Token);
     }
 
     [Fact]

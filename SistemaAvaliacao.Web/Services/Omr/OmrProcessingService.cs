@@ -9,7 +9,8 @@ public sealed class PageProcessingResult
 {
     public bool Aligned { get; set; }
     public int? ExamId { get; set; }
-    public int? StudentId { get; set; }
+    /// <summary>Token de identificação da folha lido do QR (chave autoritativa). Ver OMR hardening.</summary>
+    public string? Token { get; set; }
     public string? QrPayload { get; set; }
     public IReadOnlyList<QuestionResult> Questions { get; set; } = Array.Empty<QuestionResult>();
     public string? Warnings { get; set; }
@@ -80,7 +81,7 @@ public sealed class OmrProcessingService
         {
             Aligned = readResult.Aligned,
             ExamId = readResult.ExamId,
-            StudentId = readResult.StudentId,
+            Token = readResult.Token,
             QrPayload = readResult.QrPayload,
             Questions = readResult.Questions,
             Warnings = readResult.Warnings.Count > 0 ? string.Join(" | ", readResult.Warnings) : null,

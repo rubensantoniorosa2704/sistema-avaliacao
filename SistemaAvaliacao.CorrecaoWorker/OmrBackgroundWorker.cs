@@ -192,19 +192,23 @@ public sealed class OmrBackgroundWorker : BackgroundService
                         continue;
                     }
 
-                    if (!resultado.StudentId.HasValue)
+                    if (string.IsNullOrWhiteSpace(resultado.Token))
                     {
-                        erros.Add($"Página {pageNum}: QR Code inválido.");
-                        _logger.LogWarning("Página {Pagina}: QR Code inválido", pageNum);
+                        erros.Add($"Página {pageNum}: QR Code inválido (sem token de identificação).");
+                        _logger.LogWarning("Página {Pagina}: QR sem token", pageNum);
                         continue;
                     }
 
+                    // Identidade AUTORITATIVA: casar pelo TokenIdentificacao único da folha,
+                    // não por um id derivado do Guid (que não é segredo e permitiria
+                    // colisão/forja). Ver docs/omr-hardening.md.
                     var folha = folhasEsperadas.FirstOrDefault(f =>
-                        FolhaRespostaPdfService.GuidToStableInt(f.AlunoId) == resultado.StudentId);
+                        string.Equals(f.TokenIdentificacao, resultado.Token, StringComparison.OrdinalIgnoreCase));
 
                     if (folha == null)
                     {
-                        erros.Add($"Página {pageNum}: Aluno {resultado.StudentId} não pertence ao lote.");
+                        erros.Add($"Página {pageNum}: token não corresponde a nenhuma folha deste lote.");
+                        _logger.LogWarning("Página {Pagina}: token desconhecido no lote", pageNum);
                         continue;
                     }
 
