@@ -29,6 +29,14 @@ public class LoteCorrecao
     public string? CaminhoDebugOmr { get; set; }
     
     public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Quando o worker marcou o lote como Processando. Usado para detectar lotes
+    /// "presos" (o worker morreu no meio) e devolvê-los ao fluxo. Null enquanto
+    /// o lote não começou a ser processado. Ver docs/omr-hardening.md.
+    /// </summary>
+    public DateTime? ProcessamentoIniciadoEm { get; set; }
+
     public DateTime? FinalizadoEm { get; set; }
 
     public ICollection<FolhaResposta> Folhas { get; set; } = [];

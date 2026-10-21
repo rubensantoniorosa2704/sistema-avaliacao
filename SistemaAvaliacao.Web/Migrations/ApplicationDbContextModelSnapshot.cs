@@ -135,6 +135,9 @@ namespace SistemaAvaliacao.Web.Migrations
                         .HasMaxLength(260)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("ProcessamentoIniciadoEm")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("ProvaId")
                         .HasColumnType("TEXT");
 

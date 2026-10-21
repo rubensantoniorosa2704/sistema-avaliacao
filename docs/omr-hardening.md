@@ -57,13 +57,25 @@ correto quando a suíte roda verde.
 ### 🟡 Item 3 — Destravar lote preso em `Processando`
 - **Risco**: se o worker morre no meio do processamento (reinício do container, OOM),
   o lote fica em `Processando` para sempre — o worker só pega lotes `Recebido`.
-- **Correção**: recuperar lotes presos em `Processando` além de um limite de tempo,
-  devolvendo-os ao fluxo.
-- **Teste de fluxo crítico**: avaliar viabilidade (worker é `BackgroundService`);
-  testar a regra de recuperação isoladamente se possível.
-- **Status**: ⬜ pendente
+- **Correção**: novo campo `LoteCorrecao.ProcessamentoIniciadoEm` (migration
+  `AddProcessamentoIniciadoEmLote`); no início de cada ciclo, o worker devolve a
+  `Recebido` os lotes em `Processando` há mais que o limite (15 min). A regra pura vive
+  em `RecuperacaoLoteCorrecao` (projeto Web) para ser testável sem acoplar o projeto de
+  testes às dependências nativas do worker.
+- **Teste de fluxo crítico**: `LotePresoTests` (6 casos): preso por tempo, não-preso
+  recente, sem-timestamp tratado como preso, e os 4 outros estados nunca presos.
+- **Status**: ✅ concluído
 
 ## Verificação final
-- ⬜ `dotnet test` verde
-- ⬜ 3 commits no padrão do repositório
-- ⬜ Este documento atualizado com os status
+- ✅ `dotnet test` verde (32 testes)
+- ✅ 3 commits no padrão do repositório
+- ✅ Este documento atualizado com os status
+
+## Notas / dívidas registradas
+- **Rabisco = Válida** (Item 2): limitação conhecida do classificador por área, não bug;
+  mitigada pela revisão humana. Evoluir só se virar necessidade real (exigiria análise
+  de textura).
+- **Conflito de versão OpenCvSharp**: o projeto Web usa 4.11.0 e o Worker 4.13.0. Não foi
+  tocado aqui (fora do escopo), mas referenciar o Worker a partir dos testes expõe o
+  conflito (`MissingMethodException` no ArUco). Por isso a regra de lote preso ficou no
+  Web. Vale alinhar as versões no futuro.

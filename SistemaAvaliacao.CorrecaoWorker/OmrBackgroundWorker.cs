@@ -56,10 +56,20 @@ public sealed class OmrBackgroundWorker : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Lote considerado "preso": está em Processando há mais que este limite — sinal de
+    /// que o worker morreu no meio (reinício do container, OOM). É devolvido a Recebido
+    /// para reprocessamento. O limite é generoso para não interromper um lote grande que
+    /// ainda está legitimamente em andamento. Regra em <see cref="RecuperacaoLoteCorrecao"/>.
+    /// </summary>
+    private static readonly TimeSpan LimiteLotePreso = RecuperacaoLoteCorrecao.LimitePadrao;
+
     private async Task<bool> ProcessarProximoLoteAsync(CancellationToken cancellationToken)
     {
         await using var context =
             await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        await RecuperarLotesPresosAsync(context, cancellationToken);
 
         var lote = await context.LotesCorrecao
             .Include(l => l.Prova)
@@ -73,6 +83,7 @@ public sealed class OmrBackgroundWorker : BackgroundService
             return false;
 
         lote.Status = StatusProcessamentoCorrecao.Processando;
+        lote.ProcessamentoIniciadoEm = DateTime.UtcNow;
         lote.Erro = null;
 
         try
@@ -83,6 +94,7 @@ public sealed class OmrBackgroundWorker : BackgroundService
         {
             context.Entry(lote).Reload();
             lote.Status = StatusProcessamentoCorrecao.Processando;
+            lote.ProcessamentoIniciadoEm = DateTime.UtcNow;
             lote.Erro = null;
             await context.SaveChangesAsync(cancellationToken);
         }
@@ -152,6 +164,36 @@ public sealed class OmrBackgroundWorker : BackgroundService
 
             return true;
         }
+    }
+
+    /// <summary>
+    /// Devolve a Recebido os lotes presos em Processando além de <see cref="LimiteLotePreso"/>,
+    /// para que sejam reprocessados. Idempotente e barato. Cobre o caso de o worker ter
+    /// morrido no meio do processamento (o lote jamais sairia de Processando sozinho).
+    /// </summary>
+    private async Task RecuperarLotesPresosAsync(ApplicationDbContext context, CancellationToken ct)
+    {
+        var corte = DateTime.UtcNow - LimiteLotePreso;
+
+        var presos = await context.LotesCorrecao
+            .Where(l => l.Status == StatusProcessamentoCorrecao.Processando
+                     && (l.ProcessamentoIniciadoEm == null || l.ProcessamentoIniciadoEm < corte))
+            .ToListAsync(ct);
+
+        if (presos.Count == 0)
+            return;
+
+        foreach (var lote in presos)
+        {
+            lote.Status = StatusProcessamentoCorrecao.Recebido;
+            lote.ProcessamentoIniciadoEm = null;
+            lote.Erro = "Reprocessado: o processamento anterior foi interrompido.";
+            _logger.LogWarning(
+                "Lote {LoteId} estava preso em Processando e foi devolvido a Recebido.",
+                lote.Id);
+        }
+
+        await context.SaveChangesAsync(ct);
     }
 
     private async Task<int> ProcessarPdfComOmrAsync(
