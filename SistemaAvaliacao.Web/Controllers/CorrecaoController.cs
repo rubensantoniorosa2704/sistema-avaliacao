@@ -144,7 +144,7 @@ public class CorrecaoController : Controller
             LoteId = lote.Id,
             NomeProva = lote.Prova.Nome,
             NomeArquivo = lote.NomeArquivo,
-            UrlPdf = $"/uploads/correcoes/{Path.GetFileName(lote.CaminhoArquivo)}",
+            UrlPdf = Url.Action(nameof(Pdf), new { id = lote.Id }) ?? $"/Correcao/Pdf/{lote.Id}",
             Folhas = lote.Folhas.Where(f => f.Processada).OrderBy(f => f.NumeroPagina).Select(f => new RevisaoFolhaItem
             {
                 FolhaId = f.Id,
@@ -163,6 +163,40 @@ public class CorrecaoController : Controller
                 }).ToList()
             }).ToList()
         });
+    }
+
+    /// <summary>
+    /// Serve o PDF de um lote de correção APENAS para Admin/Coordenador (a classe já
+    /// exige o role). Substitui o acesso estático antigo por /uploads/correcoes/*, que
+    /// expunha dados de aluno e o token da folha sem autenticação. O arquivo é lido do
+    /// disco e devolvido inline; o caminho é validado contra path traversal.
+    /// GET /Correcao/Pdf/{id}
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> Pdf(Guid id)
+    {
+        var lote = await _context.LotesCorrecao
+            .AsNoTracking()
+            .FirstOrDefaultAsync(l => l.Id == id);
+
+        if (lote == null || string.IsNullOrWhiteSpace(lote.CaminhoArquivo))
+            return NotFound();
+
+        // Guarda anti path traversal: o arquivo resolvido tem que estar DENTRO da pasta
+        // oficial de correções. Protege contra um CaminhoArquivo manipulado no banco.
+        var pastaCorrecoes = SistemaAvaliacao.Web.Helpers.CaminhoArmazenamento
+            .ResolverSubpasta(_environment.WebRootPath, "correcoes");
+        var caminhoCompleto = Path.GetFullPath(lote.CaminhoArquivo);
+        var raizPermitida = Path.GetFullPath(pastaCorrecoes) + Path.DirectorySeparatorChar;
+
+        if (!caminhoCompleto.StartsWith(raizPermitida, StringComparison.OrdinalIgnoreCase)
+            || !System.IO.File.Exists(caminhoCompleto))
+            return NotFound();
+
+        var stream = System.IO.File.OpenRead(caminhoCompleto);
+        // Inline (fileDownloadName null) para o visualizador de PDF do navegador abrir na
+        // tela de revisão. enableRangeProcessing permite navegar sem baixar tudo de uma vez.
+        return File(stream, "application/pdf", fileDownloadName: null, enableRangeProcessing: true);
     }
 
     [HttpPost]

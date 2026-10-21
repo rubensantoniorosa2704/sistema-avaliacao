@@ -103,6 +103,25 @@ app.UseStaticFiles();
 // CaminhoArmazenamento (ex.: /data/uploads), mas a URL pública permanece /uploads,
 // então nenhum caminho já gravado no banco precisa mudar.
 var raizUploads = SistemaAvaliacao.Web.Helpers.CaminhoArmazenamento.ResolverRaiz(app.Environment.WebRootPath);
+
+// SEGURANÇA: os PDFs de correção (/uploads/correcoes/*) contêm dados de aluno (nome,
+// respostas) e o QR com o token de identidade da folha. Eles NÃO podem ser servidos
+// estaticamente (sem autenticação). São entregues por uma action autenticada
+// (CorrecaoController.Pdf, roles Admin/Coordenador). Aqui bloqueamos o acesso estático
+// ao subcaminho antes do UseStaticFiles abaixo — devolvendo 404 (não revela existência).
+// As imagens de questão (/uploads/questoes/*) seguem públicas de propósito: o fluxo do
+// aluno é anônimo e precisa exibi-las durante a prova.
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path;
+    if (path.StartsWithSegments("/uploads/correcoes", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+    await next();
+});
+
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(raizUploads),
